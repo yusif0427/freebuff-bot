@@ -27,8 +27,7 @@ const DISABLED_SLASH_COMMANDS = new Set([
   'moon',
   'troll',
   'gif',
-  'lirik',
-  'anime-karakter'
+  'lirik'
 ]);
 
 for (const cat of CATEGORIES) {
