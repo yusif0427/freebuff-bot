@@ -2,6 +2,28 @@
 const crypto = require('crypto');
 const { emb, ok, fail, reply, COLORS, pick } = require('../helpers');
 const { snapshot: getSnapshot } = require('../stats');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
+const play = require('play-dl');
+const musicState = new Map();
+function getMusic(guildId) { return musicState.get(guildId) || null; }
+function requireVoice(i) { const ch = i.member?.voice?.channel; if (!ch) { fail(i, '🔊 Önce bir ses kanalına gir.'); return null; } return ch; }
+async function playYoutube(i, url) {
+  const ch = requireVoice(i); if (!ch) return;
+  if (!/^https?:\\/\\/(www\\.)?(youtube\\.com|youtu\\.be)\\//i.test(url)) return fail(i, '❌ Sadece YouTube linki kabul ediyorum.');
+  await i.deferReply();
+  try {
+    const info = await play.video_info(url); const title = info.video_details?.title || 'YouTube';
+    const stream = await play.stream(url, { discordPlayerCompatibility: true });
+    const old = musicState.get(i.guild.id); if (old?.player) old.player.stop();
+    const connection = joinVoiceChannel({ channelId: ch.id, guildId: ch.guild.id, adapterCreator: ch.guild.voiceAdapterCreator, selfDeaf: true });
+    const player = createAudioPlayer(); const resource = createAudioResource(stream.stream, { inputType: stream.type });
+    player.play(resource); connection.subscribe(player); musicState.set(i.guild.id, { connection, player, title, url });
+    player.once(AudioPlayerStatus.Idle, () => { if (musicState.get(i.guild.id)?.player === player) musicState.delete(i.guild.id); });
+    connection.on(VoiceConnectionStatus.Disconnected, () => { if (musicState.get(i.guild.id)?.connection === connection) musicState.delete(i.guild.id); });
+    return i.editReply({ embeds: [emb('🎵 FREEBUFF Müzik', '▶️ **' + title + '**\\n🔗 ' + url + '\\n🔊 **' + ch.name + '** kanalında çalıyor.', COLORS.info)] });
+  } catch (e) { console.error('[music] YouTube oynatma hatası:', e.message); return i.editReply({ embeds: [emb('❌ Müzik Hatası', 'YouTube videosu oynatılamadı. Linki kontrol et veya başka bir video dene.', COLORS.err)] }); }
+}
+
 
 const U = (name, desc, required = true) => ({ name, description: desc, type: 6, required });
 const S = (name, desc, required = false) => ({ name, description: desc, type: 3, required });
@@ -14,6 +36,31 @@ async function fetchJson(url, opts = {}) {
 }
 
 const commands = [
+  {
+    name: 'ses-cek', description: 'Bir üyeyi bulunduğun ses kanalına çeker', options: [U('user', 'Çekilecek üye')],
+    async execute(i) {
+      const channel = requireVoice(i); if (!channel) return;
+      if (!i.memberPermissions?.has('MoveMembers')) return fail(i, '❌ Üyeleri taşıma yetkin yok.');
+      const user = i.options.getMember('user');
+      if (!user?.voice?.channel) return fail(i, '❌ Bu üye bir ses kanalında değil.');
+      if (user.id === i.user.id) return fail(i, '😄 Kendini çekemezsin.');
+      try { await user.voice.setChannel(channel, 'FREEBUFF /ses-cek'); return ok(i, '🔊 Ses Çekildi', '**' + user.user.username + '** → **' + channel.name + '**'); }
+      catch (_) { return fail(i, '❌ Üye taşınamadı. Botun **Move Members** yetkisini kontrol et.'); }
+    }
+  },
+  {
+    name: 'muzik', description: 'YouTube linkini ses kanalında oynatır', options: [S('link', 'YouTube video linki', true)],
+    async execute(i) { return playYoutube(i, i.options.getString('link')); }
+  },
+  {
+    name: 'muzik-durdur', description: 'Çalan müziği durdurur', options: [],
+    async execute(i) { const s=getMusic(i.guild.id); if(!s) return fail(i,'🎵 Şu anda müzik çalmıyor.'); s.player.stop(); s.connection.destroy(); musicState.delete(i.guild.id); return ok(i,'⏹️ Müzik Durduruldu','Bot ses kanalından çıktı.'); }
+  },
+  {
+    name: 'muzik-cikis', description: 'Botu ses kanalından çıkarır', options: [],
+    async execute(i) { const s=getMusic(i.guild.id); if(!s) return fail(i,'🔊 Bot bir ses kanalında değil.'); s.player.stop(); s.connection.destroy(); musicState.delete(i.guild.id); return ok(i,'👋 Müzik Botu Çıktı','Ses kanalından ayrıldım.'); }
+  },
+
   {
     name: 'yeniden-baslat', description: 'Sadece Freebuff sunucusunda botu yeniden başlatır', options: [],
     async execute(i) {
