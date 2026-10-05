@@ -76,10 +76,32 @@ const commands = [
     }
   },
   {
-    name: 'rol-dondur', description: 'Rastgele bir eglence komutu secer', options: [],
+    name: 'rank', description: 'Gerçek XP ve mesaj istatistiklerini gösterir', options: [U('user', 'Bakılacak kullanıcı', false)],
     async execute(i) {
-      const pool = ['zar', 'yaziTura', '8ball', 'sansliSayi', 'komik'];
-      return ok(i, '🎡 Çark', `Sana önerdiğim komut: \`/${pick(pool)}\``);
+      const community = require('../community');
+      const user = i.options.getUser('user') || i.user;
+      const r = community.rank(i.guild.id, user.id);
+      const need = Math.max(0, r.nextXp - r.user.xp);
+      const bar = '█'.repeat(Math.min(10, Math.floor((r.user.xp % 100) / 10))) + '░'.repeat(Math.max(0, 10 - Math.floor((r.user.xp % 100) / 10)));
+      return ok(i, '📈 Rank', `**${user.tag}**\nSeviye: **${r.user.level}** • XP: **${r.user.xp}**\n${bar}\nMesaj: **${r.user.messages}** • Sunucu sırası: **#${r.position}**\nSonraki seviye için: **${need} XP**`);
+    }
+  },
+  {
+    name: 'xp-top', description: 'Sunucunun XP liderlik tablosunu gösterir', options: [],
+    async execute(i) {
+      const community = require('../community');
+      const rows = community.top(i.guild.id, 10);
+      if (!rows.length) return fail(i, 'Henüz XP verisi yok. Mesajlaşmaya başlayın!');
+      return ok(i, '🏆 XP Liderliği', rows.map((u, n) => `${n + 1}. <@${u.userId}> — Lv.${u.level} • ${u.xp} XP • ${u.messages} mesaj`).join('\\n'));
+    }
+  },
+  {
+    name: 'haftalik', description: 'Son 7 günün en aktif üyelerini gösterir', options: [],
+    async execute(i) {
+      const community = require('../community');
+      const rows = community.weekly(i.guild.id, 10);
+      if (!rows.length) return fail(i, 'Son 7 günde yeterli aktivite yok.');
+      return ok(i, '🔥 Haftalık Aktivite', rows.map((u, n) => `${n + 1}. <@${u.userId}> — **${u.messages}** mesaj`).join('\\n'));
     }
   },
   {
@@ -94,20 +116,15 @@ const commands = [
       return i.editReply('✅ Mesaj silindi.');
     }
   },
-  {
-    name: 'kus', description: 'Rastgele bir kuş emoji bilgisi verir', options: [],
+  { name: 'kus', description: 'Rastgele bir kuş emoji bilgisi verir', options: [],
     async execute(i) {
-      const birds = [['🦅', 'Kartal'], ['🦉', 'Baykuş'], ['🦜', 'Papağan'], ['🐧', 'Penguen'], ['🦆', 'Ördek'], ['🕊️', 'Güvercin'], ['🐦', 'Serçe']];
-      const [e, name] = pick(birds);
-      return ok(i, `${e} Kuş`, `Bugünün kuşu: **${name}** ${e}\n**${userTag(i)}**, ${name} seni bekliyor!`);
+      const birds = [['🦅','Kartal'],['🦉','Baykuş'],['🦜','Papağan'],['🐧','Penguen'],['🦆','Ördek'],['🕊️','Güvercin'],['🐦','Serçe']];
+      const [e,name] = pick(birds); return ok(i, `${e} Kuş`, `Bugünün kuşu: **${name}** ${e}`);
     }
   },
-  {
-    name: 'moon', description: 'Ayın evrelerinden birini gösterir', options: [],
+  { name: 'moon', description: 'Ayın evrelerinden birini gösterir', options: [],
     async execute(i) {
-      const phases = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
-      const p = pick(phases);
-      return ok(i, '🌙 Ay', `Bugün ay: ${p}\nAy evresi senin için ${rand(100) < 50 ? 'olumlu' : 'olumsuz'} enerji taşıyor.`);
+      const phases=['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘']; return ok(i,'🌙 Ay',`Bugün ay: ${pick(phases)}`);
     }
   },
   {
