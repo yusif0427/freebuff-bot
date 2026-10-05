@@ -3,6 +3,7 @@ const { Client, GatewayIntentBits, Partials, REST, Routes, Collection, Events } 
 const stats = require('./stats');
 const prefix = require('./prefixCommands');
 const { storeSnipe } = require('./commands/moderation');
+const community = require('./community');
 
 const CATEGORIES = ['moderation', 'server', 'utility', 'games', 'fun', 'economy'];
 const CATEGORY_LABELS = {
@@ -98,6 +99,7 @@ client.on(Events.InteractionCreate, async (i) => {
 // --- prefix + game answers ----------------------------------------------
 client.on(Events.MessageCreate, async (msg) => {
   if (msg.author.bot) return;
+  if (msg.guild) community.addMessage(msg.guild.id, msg.author.id, msg.author.username);
   const p = prefix.prefix;
 
   // game answer handling (word/riddle/math/quiz state)
