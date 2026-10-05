@@ -1,6 +1,6 @@
 'use strict';
 const crypto = require('crypto');
-const { emb, ok, fail, COLORS, pick } = require('../helpers');
+const { emb, ok, fail, reply, COLORS, pick } = require('../helpers');
 const { snapshot: getSnapshot } = require('../stats');
 
 const U = (name, desc, required = true) => ({ name, description: desc, type: 6, required });
@@ -56,24 +56,65 @@ const commands = [
   {
     name: 'yardim', description: 'Komut listesini ve yardım menüsünü gösterir', options: [S('komut', 'Belirli bir komut hakkında bilgi')],
     async execute(i) {
-      const all = [...i.client.commands.values()];
+      const disabled = i.client.DISABLED_SLASH_COMMANDS || new Set();
       const q = i.options.getString('komut');
+
+      const active = [...i.client.commands.values()]
+        .filter(c => !disabled.has(c.name))
+        .sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+
       if (q) {
         const key = q.trim().toLowerCase().replace(/^\//, '');
-        const c = all.find(x => x.name === key);
-        if (!c) return fail(i, `**${q}** diye bir komut yok. Tüm liste için \`/yardim\` yaz.`);
-        return ok(i, `/${c.name}`, `**${c.description}**${c.options && c.options.length ? '\nParametreler: ' + c.options.map(o => `\`${o.name}\``).join(', ') : ''}`);
+        const c = active.find(x => x.name === key);
+        if (!c) {
+          return fail(i, `**${q}** diye bir aktif slash komut yok. \`/yardim\` ile güncel listeyi aç.`);
+        }
+        const params = c.options?.length
+          ? '\\nParametreler: ' + c.options.map(o => '\\`' + o.name + '\\`').join(', ')
+          : '';
+        return ok(i, '🧭 /' + c.name, c.description + params + '\\n\\nDurum: 🟢 Aktif');
       }
-      const cats = {
-        '🛡️ Moderasyon': ['ban', 'unban', 'kick', 'timeout', 'untimeout', 'purge', 'slowmode', 'lock', 'unlock', 'warn', 'warns', 'unwarn', 'mod-rapor', 'snipe', 'rolver', 'rolal', 'sesat', 'kilitall', 'kilitallac', 'sunucu-kur'],
-        '📌 Sunucu': ['serverinfo', 'userinfo', 'avatar', 'banner', 'uye-sayi', 'rolbilgi', 'kanalbilgi', 'davet-sayi', 'anket', 'sunucu-resim', 'roller', 'kanallar', 'emojiler', 'sabitlenen', 'ilkmesaj'],
-        '🔧 Yardımcı': ['ping', 'uptime', 'yeniden-baslat', 'yardim', 'hatirlat', 'hesapla', 'cevir', 'hava', 'sozluk', 'sehir-saat', 'rastgele', 'sayi-tahmin', 'renk-kod', 'not', 'istatistik', 'boostlar', 'tesekkur'],
-        '🎮 Oyun': ['zar', 'tas-kagit-makas', '8ball', 'kelime-tahmin', 'carpim-tablosu', 'sansli-sayi', 'hafiza-emoji', 'yazi-tura', 'sayi-ezber', 'sira-bul', 'karisik-kelime', 'bilmece', 'dogru-mi', 'emoji-bil', 'sansli-cark', 'kart-savas', 'kaplumbaga-yarisi', 'hizli-toplama', 'zar-yarisi'],
-        '😄 Eğlence': ['komik', 'saka', 'ask-hesap', 'seviye', 'rank', 'xp-top', 'haftalik', 'hug', 'pat', 'mesaj-geri-al', 'kus', 'moon', 'troll', 'gif', 'lirik', 'sarki-soz', 'anime-karakter'],
-        '💰 Ekonomi': ['bakiye', 'gunluk', 'calis', 'transfer', 'banka', 'magaza', 'satin-al', 'envanter', 'siralama', 'kumar', 'maden', 'balik', 'hirsiz', 'odul', 'saatlik']
-      };
-      const lines = Object.entries(cats).map(([cat, names]) => `**${cat}** (${names.length})\n${names.map(n => `\`/${n}\``).join(' ')}`);
-      return ok(i, '📚 Komut Listesi', lines.join('\n\n').slice(0, 3900));
+
+      const counts = Object.fromEntries(
+        Object.entries(i.client.CATEGORY_LABELS || {}).map(([cat, label]) => [
+          cat,
+          active.filter(c => c.category === cat).length
+        ])
+      );
+
+      const lines = [
+        '**FREEBUFF KOMUT MERKEZİ**',
+        '',
+        '🌑 Koyu tema • Güncel slash listesi • Kategori menüsü',
+        '',
+        ...Object.entries(i.client.CATEGORY_LABELS || {}).map(([cat, label]) =>
+          label + ' — **' + (counts[cat] || 0) + ' aktif**'
+        ),
+        '',
+        '💡 Belirli komut: `/yardim komut:ban`',
+        '🧹 Bu ekran yalnızca Discord’a gerçekten kaydedilen slash komutlarını gösterir.'
+      ];
+
+      const e = emb('📚 FREEBUFF • Yardım Merkezi', lines.join('\\n'), COLORS.info);
+      const options = Object.entries(i.client.CATEGORY_LABELS || {}).map(([value, label]) => ({
+        label: label.replace(/^\S+\s*/, '').slice(0, 100),
+        value,
+        description: String(counts[value] || 0) + ' aktif slash komut',
+        emoji: label.slice(0, 2)
+      }));
+
+      const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+      const row = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId('freebuff:help')
+          .setPlaceholder('📚 Kategori seç...')
+          .addOptions(options)
+      );
+
+      return reply(i, e, false).then(() => {
+        // Components must be attached to the original interaction message.
+        return i.editReply({ embeds: [e], components: [row] });
+      });
     }
   },
   {
