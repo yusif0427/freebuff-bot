@@ -28,12 +28,7 @@ const DISABLED_SLASH_COMMANDS = new Set([
   'troll',
   'gif',
   'lirik',
-  'sarki-soz',
-  'anime-karakter',
-  'kart-savas',
-  'kaplumbaga-yarisi',
-  'zar-yarisi',
-  'hizli-toplama'
+  'anime-karakter'
 ]);
 
 for (const cat of CATEGORIES) {
