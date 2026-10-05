@@ -1,10 +1,28 @@
 'use strict';
 const { EmbedBuilder } = require('discord.js');
 
-const COLORS = { ok: 0x22c55e, err: 0xef4444, info: 0x3b82f6, warn: 0xf59e0b, fun: 0xa855f7 };
+// FREEBUFF dark UI palette. Individual commands may still choose an accent
+// colour; the embed itself is kept visually consistent with the dark theme.
+const COLORS = {
+  ok: 0x22c55e,
+  err: 0xef4444,
+  info: 0x64748b,
+  warn: 0xf59e0b,
+  fun: 0xa855f7
+};
+const UI = {
+  bg: 0x0b0f14,
+  footer: 'FREEBUFF • /yardim',
+  icon: 'https://cdn.discordapp.com/embed/avatars/0.png'
+};
 
 function emb(title, desc, color = COLORS.info) {
-  return new EmbedBuilder().setColor(color).setTitle(title).setDescription(desc == null ? null : String(desc));
+  return new EmbedBuilder()
+    .setColor(color)
+    .setTitle(String(title || 'FREEBUFF'))
+    .setDescription(desc == null ? null : String(desc))
+    .setFooter({ text: UI.footer })
+    .setTimestamp();
 }
 
 async function reply(i, embed, ephemeral = false) {
@@ -24,4 +42,4 @@ async function fail(i, msg) {
 const rand = (n) => Math.floor(Math.random() * n);
 const pick = (arr) => arr[rand(arr.length)];
 
-module.exports = { emb, reply, ok, fail, rand, pick, COLORS };
+module.exports = { emb, reply, ok, fail, rand, pick, COLORS, UI };
