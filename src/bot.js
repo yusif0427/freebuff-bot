@@ -61,11 +61,24 @@ function buildCommandBody() {
 
 async function registerCommands() {
   const token = process.env.DISCORD_TOKEN;
-  const clientId = process.env.CLIENT_ID || client.user.id;
+  if (!token) throw new Error('DISCORD_TOKEN yok');
+
+  // Slash komutları, ENV'deki CLIENT_ID'ye değil giriş yapan botun
+  // gerçek application ID'sine kaydet. Yanlış CLIENT_ID kullanılırsa
+  // komutlar Discord'da görünür ama bu bot interaction'ı alamaz ve
+  // kullanıcıya "Uygulama zamanında yanıt vermedi" hatası gösterir.
+  if (!client.user?.id) throw new Error('Discord client henüz hazır değil');
+
+  const actualClientId = client.user.id;
+  const configuredClientId = process.env.CLIENT_ID;
+  if (configuredClientId && configuredClientId !== actualClientId) {
+    console.warn(`[bot] CLIENT_ID uyumsuz: ENV=${configuredClientId}, bot=${actualClientId}. Komutlar botun gerçek ID'sine kaydediliyor.`);
+  }
+
   const body = buildCommandBody();
   const rest = new REST({ version: '10' }).setToken(token);
-  await rest.put(Routes.applicationCommands(clientId), { body });
-  console.log(`[bot] ${body.length} slash komut kaydedildi (global).`);
+  await rest.put(Routes.applicationCommands(actualClientId), { body });
+  console.log(`[bot] ${body.length} slash komut kaydedildi (global) — application=${actualClientId}`);
 }
 
 client.once(Events.ClientReady, (c) => {
@@ -82,7 +95,15 @@ client.once(Events.ClientReady, (c) => {
 client.on(Events.InteractionCreate, async (i) => {
   if (!i.isChatInputCommand()) return;
   const cmd = commands.get(i.commandName);
-  if (!cmd) return;
+  if (!cmd) {
+    console.warn(`[bot] Bilinmeyen slash interaction: /${i.commandName}`);
+    try {
+      if (!i.replied && !i.deferred) {
+        await i.reply({ content: '❌ Bu komut botun mevcut komut listesinde yok. Komutları yeniden kaydetmeyi deneyin.', ephemeral: true });
+      }
+    } catch (_) {}
+    return;
+  }
   stats.record(cmd.name);
   try {
     await cmd.execute(i);
