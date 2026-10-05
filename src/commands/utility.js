@@ -27,7 +27,7 @@ const commands = [
         return fail(i, '❌ Bu komutu sadece sunucu yöneticisi kullanabilir.');
       }
 
-      await i.reply({ content: '🔄 **Bot yeniden başlatılıyor...**\nRender üzerinde süreç otomatik olarak yeniden başlatılacaktır.' });
+      await reply(i, emb('🔄 Bot yeniden başlatılıyor', 'Render üzerindeki süreç yeniden başlatılacak. Lütfen birkaç saniye bekle.', COLORS.warn));
 
       setTimeout(() => {
         console.log('[bot] /yeniden-baslat kullanıldı — süreç kapatılıyor.');
@@ -39,10 +39,10 @@ const commands = [
     name: 'ping', description: 'Botun gecikmesini (ping) gösterir', options: [],
     async execute(i) {
       const t0 = Date.now();
-      const msg = await i.reply({ content: '🏓 **Pong!** hesaplanıyor...', fetchReply: true });
+      const msg = await i.reply({ embeds: [emb('🏓 Ping', 'Ölçülüyor...', COLORS.info)], fetchReply: true });
       const ws = Math.round(i.client.ws.ping);
       const api = Date.now() - t0;
-      await msg.edit(`🏓 **Pong!**\nWebsocket: **${ws} ms**\nAPI: **${api} ms**`);
+      await msg.edit({ embeds: [emb('🏓 Ping Sonucu', `Websocket: **${ws} ms**\\nAPI: **${api} ms**`, COLORS.ok)] });
     }
   },
   {
