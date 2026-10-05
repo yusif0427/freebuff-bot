@@ -53,3 +53,17 @@ DISCORD_TOKEN=token CLIENT_ID=client_id npm start
 | `GET /api/health` | sağlık kontrolü (uptime monitor için) |
 
 Veriler `data/` altında JSON olarak saklanır (`economy.json`, `warns.json`, `usage.json`).
+
+
+## Yeni sistemler
+
+Bu sürümde:
+- Gerçek XP/rank: mesaj aktivitesinden kalıcı XP, seviye, mesaj sayısı ve sunucu sırası.
+- /xp-top: sunucunun XP liderliği.
+- /haftalik: son 7 günün en aktif üyeleri.
+- /mod-rapor: son 7 gün ban/kick/timeout/warn özeti ve son ban kayıtları.
+- /sunucu-kur: yönetici tek komutla temel kategori, metin ve ses kanallarını oluşturabilir.
+- Discord Dashboard: /auth/discord ile Discord OAuth2 giriş. Bunun için Render'a DISCORD_CLIENT_SECRET ve DISCORD_REDIRECT_URI eklenmeli.
+- Moderasyon işlemleri haftalık rapor için kalıcı JSON kayıtlarına alınır.
+
+OAuth Redirect URI örneği: https://SITEN.onrender.com/auth/callback. Aynı adresi Discord Developer Portal'daki OAuth2 Redirects alanına ekle.
