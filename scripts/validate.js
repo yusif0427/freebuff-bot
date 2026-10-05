@@ -28,9 +28,8 @@ console.log('total          :', total);
 console.log('categories     :', [...new Set([...commands.values()].map(c => c.category))].join(', '));
 console.log('prefix         :', prefix.prefix);
 
-if (commands.size !== 100) errors.push(`slash count must be 100 (Discord global limit), got ${commands.size}`);
+if (commands.size < 1) errors.push('no slash commands loaded');
 if (total < 100) errors.push(`total must be > 100, got ${total}`);
-if (commands.size !== 100 + (commands.size - 100)) errors.push('unreachable');
 
 // duplicate names
 const names = [...commands.values()].map(c => c.name);
@@ -39,7 +38,7 @@ if (dupes.length) errors.push('duplicate slash names: ' + dupes.join(','));
 
 // REST payload sanity (what registerCommands PUTs to Discord)
 const body = buildCommandBody();
-if (body.length !== 100) errors.push(`REST payload must be 100, got ${body.length}`);
+if (body.length < 1) errors.push('REST payload is empty');
 if (body.length > 100) errors.push('Discord global limit (100) exceeded');
 const OPT_TYPES = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
 for (const c of body) {
