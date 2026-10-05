@@ -14,7 +14,7 @@ function save() {
 }
 function user(guildId, userId, name='User') {
   const k = guildId + ':' + userId;
-  if (!db.users[k]) db.users[k] = { guildId, userId, name, xp: 0, level: 0, messages: 0, lastMessage: 0 };
+  if (!db.users[k]) db.users[k] = { guildId, userId, name, xp: 0, level: 0, messages: 0, weeklyMessages: 0, weekStart: Date.now(), lastMessage: 0 };
   db.users[k].name = name || db.users[k].name;
   return db.users[k];
 }
@@ -23,7 +23,8 @@ function addMessage(guildId, userId, name) {
   const now = Date.now();
   if (now - u.lastMessage < 45000) return { gained: 0, levelUp: false, ...u };
   const gained = 15 + Math.floor(Math.random() * 11);
-  u.xp += gained; u.messages += 1; u.lastMessage = now;
+  if (now - (u.weekStart || now) >= 7 * 86400000) { u.weekStart = now; u.weeklyMessages = 0; }
+  u.xp += gained; u.messages += 1; u.weeklyMessages = (u.weeklyMessages || 0) + 1; u.lastMessage = now;
   const old = u.level;
   u.level = Math.floor(Math.sqrt(u.xp / 100));
   save();
@@ -39,9 +40,8 @@ function top(guildId, limit=10) {
   return Object.values(db.users).filter(x => x.guildId === guildId).sort((a,b) => b.xp-a.xp).slice(0, limit);
 }
 function weekly(guildId, limit=10) {
-  const since = Date.now() - 7 * 86400000;
-  return Object.values(db.users).filter(x => x.guildId === guildId && x.lastMessage >= since)
-    .sort((a,b) => b.messages-a.messages).slice(0, limit);
+  return Object.values(db.users).filter(x => x.guildId === guildId && x.weeklyMessages > 0)
+    .sort((a,b) => b.weeklyMessages-a.weeklyMessages).slice(0, limit);
 }
 function recordGuild(guildId, patch={}) {
   db.guilds[guildId] = { ...(db.guilds[guildId] || {}), ...patch };
