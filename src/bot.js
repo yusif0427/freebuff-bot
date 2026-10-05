@@ -19,6 +19,23 @@ const CATEGORY_LABELS = {
 const commands = new Collection();
 const SLASH_LIMIT = 100;
 
+// Discord global slash command limiti 100. Botta kullanılabilen prefix
+// komutlarını koruyoruz; aşağıdaki daha az kullanılan komutlar slash menüsünden
+// kaldırılır ama koddan silinmez. Böylece eski komutlar prefix ile çalışmaya
+// devam ederken Discord'daki / komut listesi limit altında kalır.
+const DISABLED_SLASH_COMMANDS = new Set([
+  'moon',
+  'troll',
+  'gif',
+  'lirik',
+  'sarki-soz',
+  'anime-karakter',
+  'kart-savas',
+  'kaplumbaga-yarisi',
+  'zar-yarisi',
+  'hizli-toplama'
+]);
+
 for (const cat of CATEGORIES) {
   const mod = require(`./commands/${cat}`);
   for (const cmd of mod.commands) {
@@ -34,7 +51,11 @@ for (const cmd of commands.values()) {
   if (cmd.name !== cmd.name.toLowerCase()) throw new Error(`Komut adi kucuk harf olmali: ${cmd.name}`);
   if (!cmd.description || cmd.description.length > 100) throw new Error(`Aciklama gecersiz: ${cmd.name}`);
 }
-if (commands.size > SLASH_LIMIT) throw new Error(`Slash komut limiti asildi: ${commands.size} > ${SLASH_LIMIT}`);
+const slashCommandCount = buildCommandBody().length;
+if (slashCommandCount > SLASH_LIMIT) {
+  throw new Error(`Slash komut limiti asildi: ${slashCommandCount} > ${SLASH_LIMIT}`);
+}
+console.log(`[bot] ${commands.size} toplam komut, ${slashCommandCount} slash komut kaydedilecek.`);
 
 // --- client --------------------------------------------------------------
 const client = new Client({
@@ -51,12 +72,14 @@ client.CATEGORY_LABELS = CATEGORY_LABELS;
 
 // Exact JSON payload sent to Discord's REST API — exported so tests can verify it.
 function buildCommandBody() {
-  return [...commands.values()].map(c => ({
-    name: c.name,
-    description: c.description,
-    options: (c.options || []).map(o => ({ ...o })),
-    ...(c.default_member_permissions ? { default_member_permissions: c.default_member_permissions } : {})
-  }));
+  return [...commands.values()]
+    .filter(c => !DISABLED_SLASH_COMMANDS.has(c.name))
+    .map(c => ({
+      name: c.name,
+      description: c.description,
+      options: (c.options || []).map(o => ({ ...o })),
+      ...(c.default_member_permissions ? { default_member_permissions: c.default_member_permissions } : {})
+    }));
 }
 
 async function registerCommands() {
