@@ -4,6 +4,7 @@ const stats = require('./stats');
 const prefix = require('./prefixCommands');
 const { storeSnipe } = require('./commands/moderation');
 const community = require('./community');
+const { patchInteraction, ACCENTS } = require('./imageUi');
 
 const CATEGORIES = ['moderation', 'server', 'utility', 'games', 'fun', 'economy'];
 const CATEGORY_LABELS = {
@@ -131,6 +132,13 @@ client.once(Events.ClientReady, (c) => {
 
 // --- slash interactions --------------------------------------------------
 client.on(Events.InteractionCreate, async (i) => {
+  patchInteraction(i, {
+    commandName: i.isChatInputCommand() ? i.commandName : 'yardim',
+    category: i.isChatInputCommand() ? (commands.get(i.commandName)?.category || 'utility') : 'utility',
+    user: i.user?.username || 'Discord üyesi',
+    guild: i.guild?.name || 'FREEBUFF Sunucusu'
+  });
+
   if (i.isStringSelectMenu() && i.customId === 'freebuff:help') {
     const category = i.values[0];
     const label = CATEGORY_LABELS[category] || category;
