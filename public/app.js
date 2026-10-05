@@ -152,5 +152,22 @@ document.addEventListener('DOMContentLoaded', () => {
   pollStats();
   loadCommands();
   bindSearch();
+  loadDashboard();
   setInterval(pollStats, 5000);
 });
+
+
+async function loadDashboard() {
+  const card = $('dashboard-card'), link = $('login-link');
+  try {
+    const res = await fetch('/api/me', { cache: 'no-store' });
+    if (!res.ok) return;
+    const d = await res.json();
+    link.textContent = 'Dashboard';
+    const avatar = d.user.avatar ? `https://cdn.discordapp.com/avatars/${d.user.id}/${d.user.avatar}.png?size=64` : '';
+    card.innerHTML = `
+      <div class="feature"><span>👤</span><h3>${d.user.global_name || d.user.username}</h3><p>Discord hesabınla giriş yaptın.</p><button class="btn btn-ghost" id="logout-btn">Çıkış yap</button></div>
+      <div class="feature"><span>🏠</span><h3>Sunucuların (${d.guilds.length})</h3><p>${d.guilds.slice(0,12).map(g => `${g.botPresent ? '🟢' : '⚪'} <strong>${g.name}</strong>${g.botPresent ? ' — Bot aktif' : ' — Bot ekli değil'}`).join('<br>') || 'Sunucu bulunamadı.'}</p></div>`;
+    $('logout-btn').onclick = async () => { await fetch('/auth/logout',{method:'POST'}); location.reload(); };
+  } catch (_) {}
+}
