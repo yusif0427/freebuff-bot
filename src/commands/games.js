@@ -1,5 +1,5 @@
 'use strict';
-const { emb, ok, fail, COLORS, rand, pick } = require('../helpers');
+const { emb, ok, fail, reply, COLORS, rand, pick } = require('../helpers');
 
 const S = (name, desc, required = false) => ({ name, description: desc, type: 3, required });
 const I = (name, desc, required = false) => ({ name, description: desc, type: 4, required });
@@ -92,7 +92,7 @@ const commands = [
     name: 'sayi-ezber', description: 'Gosterilen sayiyi ezberle, sonra gir', options: [],
     async execute(i) {
       const n = String(rand(100000));
-      await i.reply({ content: `🧠 **Ezberle:** \`${n}\` — 5 saniye sonra silinecek!`, ephemeral: true });
+      await reply(i, emb('🧠 Sayı Ezber', 'Ezberle: **\`' + n + '\`**\\n5 saniye sonra gizlenecek.', COLORS.info), true);
       setTimeout(() => i.deleteReply().catch(() => {}), 5000);
       i.client.memoryNum = n;
       setTimeout(() => { i.client.memoryNum = null; }, 60_000);
