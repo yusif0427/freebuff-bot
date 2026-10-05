@@ -1,6 +1,7 @@
 'use strict';
 const { PermissionFlagsBits } = require('discord.js');
 const { ok, fail, emb, COLORS } = require('../helpers');
+const moderationStats = require('../moderationStats');
 
 // per-channel last deleted message, filled by bot.js (messageDelete)
 const snipeMap = new Map();
@@ -21,6 +22,7 @@ const commands = [
       const member = i.guild.members.cache.get(user.id) || await i.guild.members.fetch(user.id).catch(() => null);
       if (member && !member.bannable) return fail(i, 'Bu üyeyi yasaklayamam (rolü benden yüksek olabilir).');
       await i.guild.members.ban(user.id, { reason }).catch(e => fail(i, 'Yasaklama başarısız: ' + e.message));
+      moderationStats.record('bans', i.guild.id, { userId: user.id, user: user.tag, by: i.user.id, reason });
       return ok(i, '🔨 Yasaklandı', `**${user.tag}** yasaklandı.\nSebep: ${reason}`);
     }
   },
@@ -44,6 +46,7 @@ const commands = [
       if (!member.kickable) return fail(i, 'Bu üyeyi atamam (rolü benden yüksek).');
       const reason = i.options.getString('sebep') || 'Sebep belirtilmedi';
       await member.kick(reason);
+      moderationStats.record('kicks', i.guild.id, { userId: member.id, user: member.user.tag, by: i.user.id, reason });
       return ok(i, '👢 Atıldı', `**${member.user.tag}** atıldı.\nSebep: ${reason}`);
     }
   },
@@ -56,7 +59,9 @@ const commands = [
       if (!member) return fail(i, 'Bu üye sunucuda değil.');
       if (mins < 1 || mins > 40320) return fail(i, 'Süre 1 dakika ile 40320 dakika (28 gün) arasında olmalı.');
       if (!member.moderatable) return fail(i, 'Bu üyeyi susturamam.');
-      await member.timeout(mins * 60_000, i.options.getString('sebep') || 'Susturuldu');
+      const timeoutReason = i.options.getString('sebep') || 'Susturuldu';
+      await member.timeout(mins * 60_000, timeoutReason);
+      moderationStats.record('timeouts', i.guild.id, { userId: member.id, user: member.user.tag, by: i.user.id, reason: timeoutReason, minutes: mins });
       return ok(i, '🔇 Susturuldu', `**${member.user.tag}** ${mins} dakika susturuldu.`);
     }
   },
@@ -116,6 +121,7 @@ const commands = [
       const user = i.options.getUser('user');
       const reason = i.options.getString('sebep') || 'Sebep belirtilmedi';
       const count = addWarn(i.guild.id, user.id, reason, i.user.id);
+      moderationStats.record('warns', i.guild.id, { userId: user.id, user: user.tag, by: i.user.id, reason });
       return ok(i, '⚠️ Uyarı verildi', `**${user.tag}** uyarıldı. (Toplam uyarı: **${count}**)\nSebep: ${reason}`);
     }
   },
@@ -143,17 +149,15 @@ const commands = [
     }
   },
   {
-    name: 'nuke', description: 'Kanalı kopyalayarak temizler (tüm mesajları siler)', options: [],
-    default_member_permissions: String(PermissionFlagsBits.ManageChannels),
+    name: 'mod-rapor', description: 'Son 7 günün moderasyon raporunu gösterir', options: [],
+    default_member_permissions: String(PermissionFlagsBits.ModerateMembers),
     async execute(i) {
-      await i.deferReply();
-      const ch = i.channel;
-      const pos = ch.position;
-      const cloned = await ch.clone().catch(() => null);
-      if (!cloned) return fail(i, 'Kanal kopyalanamadı.');
-      await ch.delete();
-      await cloned.setPosition(pos);
-      return ok(cloned, '💥 Nuke', `Bu kanal temizlendi. 🚀`);
+      const ms = require('../moderationStats');
+      const sum = ms.summary(i.guild.id);
+      const lines = [`🔨 Ban: **${sum.bans}**`,`👢 Kick: **${sum.kicks}**`,`🔇 Timeout: **${sum.timeouts}**`,`⚠️ Uyarı: **${sum.warns}**`];
+      const bans = ms.week(i.guild.id, 'bans').slice(-10).reverse();
+      if (bans.length) lines.push('', '**Son banlar:**', ...bans.map(x => `• ${x.user} — <@${x.by}> — ${x.reason}`));
+      return ok(i, '🛡️ Haftalık Moderasyon Raporu', lines.join('\\n'));
     }
   },
   {
@@ -229,22 +233,19 @@ const commands = [
     }
   },
   {
-    name: 'cekin', description: 'Seste olan herkesi senin kanalina ceker', options: [{ name: 'kanal', description: 'Çekilecek ses kanalı', type: 7, required: true }],
-    default_member_permissions: String(PermissionFlagsBits.MoveMembers),
+    name: 'sunucu-kur', description: 'Temel Freebuff kanal ve kategori yapısını kurar', options: [],
+    default_member_permissions: String(PermissionFlagsBits.Administrator),
     async execute(i) {
-      const channel = i.options.getChannel('kanal');
-      if (channel.type !== 2) return fail(i, 'Hedef kanal bir ses kanalı olmalı.');
-      const me = i.guild.members.me;
-      if (!me.permissions.has(PermissionFlagsBits.MoveMembers)) return fail(i, 'Yetkim yok (Move Members).');
-      const target = i.guild.channels.cache.get(channel.id);
-      if (!target) return fail(i, 'Kanal bulunamadı.');
-      let moved = 0;
-      for (const vc of i.guild.channels.cache.filter(c => c.type === 2 && c.id !== channel.id).values()) {
-        for (const m of vc.members.values()) {
-          await m.voice.setChannel(channel.id).then(() => moved++).catch(() => {});
-        }
+      const { ChannelType } = require('discord.js');
+      const plan = [{ cat: '📁 FREEBUFF', channels: [['📜・kurallar', ChannelType.GuildText],['👋・hosgeldin', ChannelType.GuildText],['💬・genel', ChannelType.GuildText],['🤖・bot-komut', ChannelType.GuildText],['📊・istatistik', ChannelType.GuildText],['🔊・Lobi', ChannelType.GuildVoice]] }];
+      let created=0, existing=0;
+      for (const group of plan) {
+        let cat=i.guild.channels.cache.find(x=>x.type===ChannelType.GuildCategory&&x.name===group.cat);
+        if(!cat){cat=await i.guild.channels.create({name:group.cat,type:ChannelType.GuildCategory}).catch(()=>null);if(cat)created++;}
+        if(!cat)continue;
+        for(const [name,type] of group.channels){const found=i.guild.channels.cache.find(x=>x.name===name&&x.parentId===cat.id);if(found){existing++;continue;}await i.guild.channels.create({name,type,parent:cat.id}).then(()=>created++).catch(()=>{});}
       }
-      return ok(i, '🧲 Çekildi', `${moved} kişi **${channel.name}** kanalına çekildi.`);
+      return ok(i,'🏗️ Sunucu Kurulumu',`Freebuff altyapısı hazır. Oluşturulan: **${created}** • Zaten vardı: **${existing}**`);
     }
   },
 ];
