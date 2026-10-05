@@ -1,6 +1,7 @@
 'use strict';
 const { PermissionFlagsBits } = require('discord.js');
 const { ok, fail, emb, COLORS } = require('../helpers');
+const moderationStats = require('../moderationStats');
 
 // per-channel last deleted message, filled by bot.js (messageDelete)
 const snipeMap = new Map();
@@ -21,6 +22,7 @@ const commands = [
       const member = i.guild.members.cache.get(user.id) || await i.guild.members.fetch(user.id).catch(() => null);
       if (member && !member.bannable) return fail(i, 'Bu üyeyi yasaklayamam (rolü benden yüksek olabilir).');
       await i.guild.members.ban(user.id, { reason }).catch(e => fail(i, 'Yasaklama başarısız: ' + e.message));
+      moderationStats.record('bans', i.guild.id, { userId: user.id, user: user.tag, by: i.user.id, reason });
       return ok(i, '🔨 Yasaklandı', `**${user.tag}** yasaklandı.\nSebep: ${reason}`);
     }
   },
@@ -44,6 +46,7 @@ const commands = [
       if (!member.kickable) return fail(i, 'Bu üyeyi atamam (rolü benden yüksek).');
       const reason = i.options.getString('sebep') || 'Sebep belirtilmedi';
       await member.kick(reason);
+      moderationStats.record('kicks', i.guild.id, { userId: member.id, user: member.user.tag, by: i.user.id, reason });
       return ok(i, '👢 Atıldı', `**${member.user.tag}** atıldı.\nSebep: ${reason}`);
     }
   },
@@ -56,7 +59,9 @@ const commands = [
       if (!member) return fail(i, 'Bu üye sunucuda değil.');
       if (mins < 1 || mins > 40320) return fail(i, 'Süre 1 dakika ile 40320 dakika (28 gün) arasında olmalı.');
       if (!member.moderatable) return fail(i, 'Bu üyeyi susturamam.');
-      await member.timeout(mins * 60_000, i.options.getString('sebep') || 'Susturuldu');
+      const timeoutReason = i.options.getString('sebep') || 'Susturuldu';
+      await member.timeout(mins * 60_000, timeoutReason);
+      moderationStats.record('timeouts', i.guild.id, { userId: member.id, user: member.user.tag, by: i.user.id, reason: timeoutReason, minutes: mins });
       return ok(i, '🔇 Susturuldu', `**${member.user.tag}** ${mins} dakika susturuldu.`);
     }
   },
@@ -116,6 +121,7 @@ const commands = [
       const user = i.options.getUser('user');
       const reason = i.options.getString('sebep') || 'Sebep belirtilmedi';
       const count = addWarn(i.guild.id, user.id, reason, i.user.id);
+      moderationStats.record('warns', i.guild.id, { userId: user.id, user: user.tag, by: i.user.id, reason });
       return ok(i, '⚠️ Uyarı verildi', `**${user.tag}** uyarıldı. (Toplam uyarı: **${count}**)\nSebep: ${reason}`);
     }
   },
