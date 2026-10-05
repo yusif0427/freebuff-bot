@@ -149,17 +149,15 @@ const commands = [
     }
   },
   {
-    name: 'nuke', description: 'Kanalı kopyalayarak temizler (tüm mesajları siler)', options: [],
-    default_member_permissions: String(PermissionFlagsBits.ManageChannels),
+    name: 'mod-rapor', description: 'Son 7 günün moderasyon raporunu gösterir', options: [],
+    default_member_permissions: String(PermissionFlagsBits.ModerateMembers),
     async execute(i) {
-      await i.deferReply();
-      const ch = i.channel;
-      const pos = ch.position;
-      const cloned = await ch.clone().catch(() => null);
-      if (!cloned) return fail(i, 'Kanal kopyalanamadı.');
-      await ch.delete();
-      await cloned.setPosition(pos);
-      return ok(cloned, '💥 Nuke', `Bu kanal temizlendi. 🚀`);
+      const ms = require('../moderationStats');
+      const sum = ms.summary(i.guild.id);
+      const lines = [`🔨 Ban: **${sum.bans}**`,`👢 Kick: **${sum.kicks}**`,`🔇 Timeout: **${sum.timeouts}**`,`⚠️ Uyarı: **${sum.warns}**`];
+      const bans = ms.week(i.guild.id, 'bans').slice(-10).reverse();
+      if (bans.length) lines.push('', '**Son banlar:**', ...bans.map(x => `• ${x.user} — <@${x.by}> — ${x.reason}`));
+      return ok(i, '🛡️ Haftalık Moderasyon Raporu', lines.join('\\n'));
     }
   },
   {
@@ -235,22 +233,19 @@ const commands = [
     }
   },
   {
-    name: 'cekin', description: 'Seste olan herkesi senin kanalina ceker', options: [{ name: 'kanal', description: 'Çekilecek ses kanalı', type: 7, required: true }],
-    default_member_permissions: String(PermissionFlagsBits.MoveMembers),
+    name: 'sunucu-kur', description: 'Temel Freebuff kanal ve kategori yapısını kurar', options: [],
+    default_member_permissions: String(PermissionFlagsBits.Administrator),
     async execute(i) {
-      const channel = i.options.getChannel('kanal');
-      if (channel.type !== 2) return fail(i, 'Hedef kanal bir ses kanalı olmalı.');
-      const me = i.guild.members.me;
-      if (!me.permissions.has(PermissionFlagsBits.MoveMembers)) return fail(i, 'Yetkim yok (Move Members).');
-      const target = i.guild.channels.cache.get(channel.id);
-      if (!target) return fail(i, 'Kanal bulunamadı.');
-      let moved = 0;
-      for (const vc of i.guild.channels.cache.filter(c => c.type === 2 && c.id !== channel.id).values()) {
-        for (const m of vc.members.values()) {
-          await m.voice.setChannel(channel.id).then(() => moved++).catch(() => {});
-        }
+      const { ChannelType } = require('discord.js');
+      const plan = [{ cat: '📁 FREEBUFF', channels: [['📜・kurallar', ChannelType.GuildText],['👋・hosgeldin', ChannelType.GuildText],['💬・genel', ChannelType.GuildText],['🤖・bot-komut', ChannelType.GuildText],['📊・istatistik', ChannelType.GuildText],['🔊・Lobi', ChannelType.GuildVoice]] }];
+      let created=0, existing=0;
+      for (const group of plan) {
+        let cat=i.guild.channels.cache.find(x=>x.type===ChannelType.GuildCategory&&x.name===group.cat);
+        if(!cat){cat=await i.guild.channels.create({name:group.cat,type:ChannelType.GuildCategory}).catch(()=>null);if(cat)created++;}
+        if(!cat)continue;
+        for(const [name,type] of group.channels){const found=i.guild.channels.cache.find(x=>x.name===name&&x.parentId===cat.id);if(found){existing++;continue;}await i.guild.channels.create({name,type,parent:cat.id}).then(()=>created++).catch(()=>{});}
       }
-      return ok(i, '🧲 Çekildi', `${moved} kişi **${channel.name}** kanalına çekildi.`);
+      return ok(i,'🏗️ Sunucu Kurulumu',`Freebuff altyapısı hazır. Oluşturulan: **${created}** • Zaten vardı: **${existing}**`);
     }
   },
 ];
