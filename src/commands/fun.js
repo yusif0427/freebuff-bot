@@ -101,7 +101,7 @@ const commands = [
       const community = require('../community');
       const rows = community.weekly(i.guild.id, 10);
       if (!rows.length) return fail(i, 'Son 7 günde yeterli aktivite yok.');
-      return ok(i, '🔥 Haftalık Aktivite', rows.map((u, n) => `${n + 1}. <@${u.userId}> — **${u.messages}** mesaj`).join('\\n'));
+      return ok(i, '🔥 Haftalık Aktivite', rows.map((u, n) => `${n + 1}. <@${u.userId}> — **${u.weeklyMessages}** mesaj`).join('\\n'));
     }
   },
   {
