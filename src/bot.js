@@ -1,5 +1,5 @@
 'use strict';
-const { Client, GatewayIntentBits, Partials, REST, Routes, Collection, Events } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, REST, Routes, Collection, Events, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const stats = require('./stats');
 const prefix = require('./prefixCommands');
 const { storeSnipe } = require('./commands/moderation');
@@ -63,6 +63,27 @@ const client = new Client({
 });
 client.commands = commands;
 client.CATEGORY_LABELS = CATEGORY_LABELS;
+client.DISABLED_SLASH_COMMANDS = DISABLED_SLASH_COMMANDS;
+
+function buildHelpComponents() {
+  const options = Object.entries(CATEGORY_LABELS).map(([value, label]) => {
+    const count = [...commands.values()].filter(c => c.category === value && !DISABLED_SLASH_COMMANDS.has(c.name)).length;
+    return {
+      label: label.replace(/^\S+\s*/, '').slice(0, 100),
+      value,
+      description: String(count) + ' aktif slash komut',
+      emoji: label.slice(0, 2)
+    };
+  });
+  return [
+    new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId('freebuff:help')
+        .setPlaceholder('📚 Bir kategori seç...')
+        .addOptions(options)
+    )
+  ];
+}
 
 // Exact JSON payload sent to Discord's REST API — exported so tests can verify it.
 function buildCommandBody() {
@@ -110,7 +131,24 @@ client.once(Events.ClientReady, (c) => {
 
 // --- slash interactions --------------------------------------------------
 client.on(Events.InteractionCreate, async (i) => {
+  if (i.isStringSelectMenu() && i.customId === 'freebuff:help') {
+    const category = i.values[0];
+    const label = CATEGORY_LABELS[category] || category;
+    const rows = [...commands.values()]
+      .filter(c => c.category === category && !DISABLED_SLASH_COMMANDS.has(c.name))
+      .sort((a, b) => a.name.localeCompare(b.name, 'tr'))
+      .map(c => '**/' + c.name + '** — ' + c.description);
+    const { emb: makeEmbed, COLORS: UI_COLORS } = require('./helpers');
+    const e = makeEmbed('📚 ' + label, rows.length ? rows.join('\\n') : 'Bu kategoride aktif slash komut yok.', UI_COLORS.info);
+    return i.update({ embeds: [e], components: buildHelpComponents() }).catch(e => {
+      console.error('[bot] yardım menüsü güncelleme hatası:', e.message);
+    });
+  }
+
   if (!i.isChatInputCommand()) return;
+
+  console.log('[bot] slash interaction alındı /' + i.commandName + ' app=' + i.applicationId + ' bot=' + (client.user?.id || '?') + ' guild=' + (i.guildId || 'DM'));
+
   const cmd = commands.get(i.commandName);
   if (!cmd) {
     console.warn(`[bot] Bilinmeyen slash interaction: /${i.commandName}`);
