@@ -15,6 +15,27 @@ async function fetchJson(url, opts = {}) {
 
 const commands = [
   {
+    name: 'yeniden-baslat', description: 'Sadece Freebuff sunucusunda botu yeniden başlatır', options: [],
+    async execute(i) {
+      const TARGET_GUILD_ID = '1383133767945945219';
+
+      if (!i.guild || i.guild.id !== TARGET_GUILD_ID) {
+        return fail(i, '❌ Bu komut sadece yetkili Freebuff sunucusunda kullanılabilir.');
+      }
+
+      if (!i.memberPermissions?.has('Administrator')) {
+        return fail(i, '❌ Bu komutu sadece sunucu yöneticisi kullanabilir.');
+      }
+
+      await i.reply({ content: '🔄 **Bot yeniden başlatılıyor...**\nRender üzerinde süreç otomatik olarak yeniden başlatılacaktır.' });
+
+      setTimeout(() => {
+        console.log('[bot] /yeniden-baslat kullanıldı — süreç kapatılıyor.');
+        process.exit(0);
+      }, 1500);
+    }
+  },
+  {
     name: 'ping', description: 'Botun gecikmesini (ping) gösterir', options: [],
     async execute(i) {
       const t0 = Date.now();
@@ -46,7 +67,7 @@ const commands = [
       const cats = {
         '🛡️ Moderasyon': ['ban', 'unban', 'kick', 'timeout', 'untimeout', 'purge', 'slowmode', 'lock', 'unlock', 'warn', 'warns', 'unwarn', 'mod-rapor', 'snipe', 'rolver', 'rolal', 'sesat', 'kilitall', 'kilitallac', 'sunucu-kur'],
         '📌 Sunucu': ['serverinfo', 'userinfo', 'avatar', 'banner', 'uye-sayi', 'rolbilgi', 'kanalbilgi', 'davet-sayi', 'anket', 'sunucu-resim', 'roller', 'kanallar', 'emojiler', 'sabitlenen', 'ilkmesaj'],
-        '🔧 Yardımcı': ['ping', 'uptime', 'yardim', 'hatirlat', 'hesapla', 'cevir', 'hava', 'sozluk', 'sehir-saat', 'rastgele', 'sayi-tahmin', 'renk-kod', 'not', 'istatistik', 'boostlar', 'tesekkur'],
+        '🔧 Yardımcı': ['ping', 'uptime', 'yeniden-baslat', 'yardim', 'hatirlat', 'hesapla', 'cevir', 'hava', 'sozluk', 'sehir-saat', 'rastgele', 'sayi-tahmin', 'renk-kod', 'not', 'istatistik', 'boostlar', 'tesekkur'],
         '🎮 Oyun': ['zar', 'tas-kagit-makas', '8ball', 'kelime-tahmin', 'carpim-tablosu', 'sansli-sayi', 'hafiza-emoji', 'yazi-tura', 'sayi-ezber', 'sira-bul', 'karisik-kelime', 'bilmece', 'dogru-mi', 'emoji-bil', 'sansli-cark', 'kart-savas', 'kaplumbaga-yarisi', 'hizli-toplama', 'zar-yarisi'],
         '😄 Eğlence': ['komik', 'saka', 'ask-hesap', 'seviye', 'rank', 'xp-top', 'haftalik', 'hug', 'pat', 'mesaj-geri-al', 'kus', 'moon', 'troll', 'gif', 'lirik', 'sarki-soz', 'anime-karakter'],
         '💰 Ekonomi': ['bakiye', 'gunluk', 'calis', 'transfer', 'banka', 'magaza', 'satin-al', 'envanter', 'siralama', 'kumar', 'maden', 'balik', 'hirsiz', 'odul', 'saatlik']
