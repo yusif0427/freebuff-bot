@@ -15,6 +15,27 @@ async function fetchJson(url, opts = {}) {
 
 const commands = [
   {
+    name: 'yeniden-baslat', description: 'Sadece Freebuff sunucusunda botu yeniden başlatır', options: [],
+    async execute(i) {
+      const TARGET_GUILD_ID = '1383133767945945219';
+
+      if (!i.guild || i.guild.id !== TARGET_GUILD_ID) {
+        return fail(i, '❌ Bu komut sadece yetkili Freebuff sunucusunda kullanılabilir.');
+      }
+
+      if (!i.memberPermissions?.has('Administrator')) {
+        return fail(i, '❌ Bu komutu sadece sunucu yöneticisi kullanabilir.');
+      }
+
+      await i.reply({ content: '🔄 **Bot yeniden başlatılıyor...**\nRender üzerinde süreç otomatik olarak yeniden başlatılacaktır.' });
+
+      setTimeout(() => {
+        console.log('[bot] /yeniden-baslat kullanıldı — süreç kapatılıyor.');
+        process.exit(0);
+      }, 1500);
+    }
+  },
+  {
     name: 'ping', description: 'Botun gecikmesini (ping) gösterir', options: [],
     async execute(i) {
       const t0 = Date.now();
