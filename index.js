@@ -28,6 +28,7 @@ app.get('/api/stats', (req, res) => {
   const s = stats.snapshot();
   res.json({
     botName: BOT_NAME,
+    inviteUrl: process.env.INVITE_URL || null,
     mode: process.env.DISCORD_TOKEN ? 'bot' : 'site-only',
     ...s,
     counts: {

@@ -39,6 +39,10 @@ async function pollStats() {
       $('foot-name').textContent = s.botName;
       document.title = `${s.botName} — ${s.counts.total}+ Komutlu Discord Botu`;
     }
+    if (s.inviteUrl) {
+      $('davet').href = s.inviteUrl;
+      $('davet-2').href = s.inviteUrl;
+    }
 
     // status badge
     botOnline = s.online;
