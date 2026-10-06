@@ -16,10 +16,9 @@
       </a>
       <nav>
         <a href="#ozellikler">Özellikler</a>
-        <a href="#istatistik">İstatistikler</a>
+                <a href="#istatistik">İstatistikler</a>
         <a href="#komutlar">Komutlar</a>
-        <a href="#dashboard" id="login-link" class="nav-cta">Discord ile Giriş</a>
-        <a href="#yonetim" id="manage-tab" class="nav-cta manage-tab" hidden>⚙️ Yönetim</a>
+        <a href="#dashboard" id="login-link" class="nav-cta">Discord ile Giriş</a><button id="owner-tab" class="owner-tab" hidden>⚙ Yönetim</button>
       </nav>
     </div>
   </header>
@@ -94,25 +93,23 @@
   <section id="dashboard" class="features dashboard-section">
     <div class="container">
       <h2>🎛️ Sunucu Dashboard <span class="pill pill-ai">AI AKTİF</span></h2>
-      <p class="section-sub">Discord hesabınla güvenli şekilde giriş yap.</p>
+      <p class="section-sub">Discord hesabınla güvenli şekilde giriş yap. Kabul edilen önerilerin AI analizleri öneri sahibine DM olarak gönderilir.</p>
       <div id="dashboard-card" class="dashboard-grid">
-        <div class="feature login-card"><span>🔐</span><h3>Discord ile giriş</h3><p>Giriş yaptığında sana özel yönetim sekmesi açılır.</p><a class="btn btn-primary" href="/auth/discord">Discord ile Giriş</a></div>
-        <div class="feature ai-card"><span>🤖</span><h3>AI Öneri Sistemi</h3><p>Kabul edilen öneriler AI tarafından analiz edilir.</p></div>
+        <div class="feature login-card"><span>🔐</span><h3>Discord ile giriş</h3><p>Profilini özelleştir, sunucularını yönet ve admin paneline eriş.</p><a class="btn btn-primary" href="/auth/discord">Discord ile Kayıt / Giriş</a></div>
+        <div class="feature ai-card"><span>🤖</span><h3>AI Öneri Sistemi</h3><p><code>.kabul</code> ile kabul edilen öneri analiz edilir ve sonuç otomatik olarak öneriyi gönderen kişinin Discord DM kutusuna gönderilir.</p></div>
       </div>
     </div>
-  </section>
+  
+  
 
-  <section id="yonetim" class="management" hidden>
-    <div class="container">
-      <div class="panel-head"><div><h2>⚙️ Sunucu Yönetimi</h2><p class="section-sub">1383133767945945219 sunucusu için özel yönetim alanı.</p></div><span class="panel-live">● YETKİLİ</span></div>
-      <div class="management-actions">
-        <button class="manage-card" id="open-admin"><span>🛡️</span><strong>Admin Paneli</strong><small>Sunucu ve bot ayarları</small></button>
-        <button class="manage-card" id="open-profile"><span>🎨</span><strong>Profil Özelleştirme</strong><small>Site profilini düzenle</small></button>
-      </div>
-      <div id="admin-content" class="admin-grid" hidden></div>
-      <div id="profile-content" class="profile-grid" hidden></div>
+  <section class="cta">
+    <div class="container cta-inner">
+      <h2>Hemen ekle, 2 dakikada hazır</h2>
+      <p>Botu sunucuna ekledikten sonra <code>/yardim</code> yaz — tüm komutları görürsün.</p>
+      <a class="btn btn-primary btn-lg" id="davet-2" href="#" target="_blank" rel="noopener">➕ Sunucuya Ekle</a>
     </div>
-  </section>
+  
+  
 
   <footer>
     <div class="container footer-inner">
@@ -122,5 +119,5 @@
   </footer>
 
   <script src="/app.js"></script>
-</body>
+<div id="owner-modal" class="owner-modal" hidden><div class="owner-backdrop" id="owner-close"></div><aside class="owner-panel"><div class="owner-head"><div><span class="owner-kicker">OWNER PANEL</span><h2>⚙ Yönetim Merkezi</h2></div><button class="owner-x" id="owner-x">×</button></div><div class="owner-tabs"><button class="owner-menu active" data-view="admin">🛡️ Admin Panel</button><button class="owner-menu" data-view="profile">🎨 Profil Özelleştir</button></div><div id="owner-view"></div></aside></div></body>
 </html>
