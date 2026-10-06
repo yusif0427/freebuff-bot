@@ -1,6 +1,7 @@
 'use strict';
 const crypto = require('crypto');
 const { emb, ok, fail, reply, COLORS, pick } = require('../helpers');
+const { renderCommandList } = require('../imageUi');
 const { snapshot: getSnapshot } = require('../stats');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
 const play = require('play-dl');
@@ -104,64 +105,18 @@ const commands = [
     name: 'yardim', description: 'Komut listesini ve yardım menüsünü gösterir', options: [S('komut', 'Belirli bir komut hakkında bilgi')],
     async execute(i) {
       const disabled = i.client.DISABLED_SLASH_COMMANDS || new Set();
+      const active = [...i.client.commands.values()].filter(c => !disabled.has(c.name)).sort((a,b) => a.name.localeCompare(b.name, 'tr'));
       const q = i.options.getString('komut');
-
-      const active = [...i.client.commands.values()]
-        .filter(c => !disabled.has(c.name))
-        .sort((a, b) => a.name.localeCompare(b.name, 'tr'));
-
       if (q) {
         const key = q.trim().toLowerCase().replace(/^\//, '');
         const c = active.find(x => x.name === key);
-        if (!c) {
-          return fail(i, `**${q}** diye bir aktif slash komut yok. \`/yardim\` ile güncel listeyi aç.`);
-        }
-        const params = c.options?.length
-          ? '\\nParametreler: ' + c.options.map(o => '\\`' + o.name + '\\`').join(', ')
-          : '';
-        return ok(i, '🧭 /' + c.name, c.description + params + '\\n\\nDurum: 🟢 Aktif');
+        if (!c) return fail(i, '**' + q + '** adlı aktif komut bulunamadı.');
+        return ok(i, '🧭 /' + c.name, c.description + (c.options?.length ? '\nParametreler: ' + c.options.map(o => '`' + o.name + '`').join(', ') : ''));
       }
-
-      const counts = Object.fromEntries(
-        Object.entries(i.client.CATEGORY_LABELS || {}).map(([cat, label]) => [
-          cat,
-          active.filter(c => c.category === cat).length
-        ])
-      );
-
-      const lines = [
-        '**FREEBUFF KOMUT MERKEZİ**',
-        '',
-        '🌑 Koyu tema • Güncel slash listesi • Kategori menüsü',
-        '',
-        ...Object.entries(i.client.CATEGORY_LABELS || {}).map(([cat, label]) =>
-          label + ' — **' + (counts[cat] || 0) + ' aktif**'
-        ),
-        '',
-        '💡 Belirli komut: `/yardim komut:ban`',
-        '🧹 Bu ekran yalnızca Discord’a gerçekten kaydedilen slash komutlarını gösterir.'
-      ];
-
-      const e = emb('📚 FREEBUFF • Yardım Merkezi', lines.join('\\n'), COLORS.info);
-      const options = Object.entries(i.client.CATEGORY_LABELS || {}).map(([value, label]) => ({
-        label: label.replace(/^\S+\s*/, '').slice(0, 100),
-        value,
-        description: String(counts[value] || 0) + ' aktif slash komut',
-        emoji: label.slice(0, 2)
-      }));
-
-      const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
-      const row = new ActionRowBuilder().addComponents(
-        new StringSelectMenuBuilder()
-          .setCustomId('freebuff:help')
-          .setPlaceholder('📚 Kategori seç...')
-          .addOptions(options)
-      );
-
-      return reply(i, e, false).then(() => {
-        // Components must be attached to the original interaction message.
-        return i.editReply({ embeds: [e], components: [row] });
-      });
+      const groups = {};
+      for (const c of active) { const label = i.client.CATEGORY_LABELS?.[c.category] || '📚 Diğer'; (groups[label] ||= []).push(c); }
+      const png = await renderCommandList(groups, i.guild?.name || 'FREEBUFF Sunucusu');
+      return i.reply({ __skipFreebuffUi: true, content: '📚 **FREEBUFF KOMUTLARI** — Tüm aktif komutlar görselde.', files: [{ attachment: png, name: 'freebuff-komutlar.png' }] });
     }
   },
   {
