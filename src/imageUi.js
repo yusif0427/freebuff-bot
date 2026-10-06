@@ -143,6 +143,7 @@ function patchInteraction(i, meta) {
     if (typeof i[method] !== 'function') continue;
     const original = i[method].bind(i);
     i[method] = async function(payload) {
+      if (payload && payload.__skipFreebuffUi) { const p = Object.assign({}, payload); delete p.__skipFreebuffUi; return original(p); }
       try {
         return original(await toImagePayload(payload, meta || {}));
       } catch (e) {
@@ -153,4 +154,29 @@ function patchInteraction(i, meta) {
   }
 }
 
-module.exports = { renderCard, toImagePayload, patchInteraction, ACCENTS };
+async function renderCommandList(groups, guildName = 'FREEBUFF Sunucusu') {
+  const cols = [[], [], []];
+  Object.entries(groups || {}).forEach(([label, items], idx) => cols[idx % 3].push({ label, items }));
+  const W = 1800, H = 1500, colW = 550;
+  let svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '">';
+  svg += '<defs><linearGradient id="listbg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#040812"/><stop offset="1" stop-color="#111b31"/></linearGradient></defs>';
+  svg += '<rect width="' + W + '" height="' + H + '" rx="34" fill="url(#listbg)"/>';
+  svg += '<text x="70" y="78" fill="#ffffff" font-family="Arial,DejaVu Sans,sans-serif" font-size="38" font-weight="800">FREEBUFF • KOMUTLAR</text>';
+  svg += '<text x="70" y="112" fill="#7894bd" font-family="Arial,DejaVu Sans,sans-serif" font-size="18">Tüm aktif slash komutları • ' + esc(guildName) + '</text>';
+  cols.forEach((groupsCol, ci) => {
+    let y = 155;
+    const x = 45 + ci * 585;
+    for (const g of groupsCol) {
+      const lines = g.items.map(item => '/' + item.name + (item.options?.length ? '  ' + item.options.map(o => '<' + o.name + '>').join(' ') : ''));
+      const h = 58 + lines.length * 25;
+      svg += '<rect x="' + x + '" y="' + y + '" width="' + colW + '" height="' + h + '" rx="22" fill="#081222" stroke="#20375d"/>';
+      svg += '<text x="' + (x+24) + '" y="' + (y+35) + '" fill="#8bb5ff" font-family="Arial,DejaVu Sans,sans-serif" font-size="21" font-weight="800">' + esc(g.label) + '</text>';
+      lines.forEach((line, li) => svg += '<text x="' + (x+24) + '" y="' + (y+67+li*25) + '" fill="#d8e6fb" font-family="Arial,DejaVu Sans,sans-serif" font-size="15">' + esc(line.slice(0,62)) + '</text>');
+      y += h + 18;
+    }
+  });
+  svg += '<text x="70" y="' + (H-35) + '" fill="#526d94" font-family="Arial" font-size="14">FREEBUFF • /yardim • Komutlar görsel olarak listelenir</text></svg>';
+  return sharp(Buffer.from(svg)).png({ compressionLevel: 9 }).toBuffer();
+}
+
+module.exports = { renderCard, renderCommandList, toImagePayload, patchInteraction, ACCENTS };
