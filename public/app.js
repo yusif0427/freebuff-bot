@@ -160,63 +160,21 @@ document.addEventListener('DOMContentLoaded', () => {
 function escapeHtml(v) { return String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
 
 async function loadDashboard() {
-  const card = $('dashboard-card'), link = $('login-link'), manage = $('manage-tab'), section = $('yonetim');
-  try {
-    const res = await fetch('/api/me', { cache: 'no-store' });
-    if (!res.ok) {
-      link.textContent = 'Discord ile Giriş';
-      manage.hidden = true;
-      section.hidden = true;
-      return;
-    }
-    const d = await res.json();
-    link.textContent = 'Dashboard';
-    const avatar = d.user.avatar ? `https://cdn.discordapp.com/avatars/${d.user.id}/${d.user.avatar}.png?size=128` : '';
-    card.innerHTML = `
-      <div class="feature profile-preview"><div class="avatar-ring">${avatar ? `<img src="${avatar}" alt="">` : '👤'}</div><h3>${escapeHtml(d.user.global_name || d.user.username)}</h3><p>Discord hesabınla giriş yaptın.</p><button class="btn btn-ghost" id="logout-btn">Çıkış yap</button></div>
-      <div class="feature"><span>🏠</span><h3>${d.guilds.length} sunucu</h3><p>${d.guilds.slice(0,8).map(g => `${g.botPresent ? '🟢' : '⚪'} <strong>${escapeHtml(g.name)}</strong>`).join('<br>') || 'Sunucu bulunamadı.'}</p></div>`;
-    $('logout-btn').onclick = async () => { await fetch('/auth/logout',{method:'POST'}); location.reload(); };
-
-    if (d.controlGuild) {
-      manage.hidden = false;
-      section.hidden = false;
-      renderAdmin(d);
-      renderProfile();
-      $('open-admin').onclick = () => { $('admin-content').hidden = false; $('profile-content').hidden = true; $('admin-content').scrollIntoView({behavior:'smooth'}); };
-      $('open-profile').onclick = () => { $('profile-content').hidden = false; $('admin-content').hidden = true; $('profile-content').scrollIntoView({behavior:'smooth'}); };
-    } else {
-      manage.hidden = true;
-      section.hidden = true;
-    }
-  } catch (_) {}
+  const card=$('dashboard-card'), link=$('login-link');
+  try{
+    const res=await fetch('/api/me',{cache:'no-store'});
+    if(!res.ok){link.textContent='Discord ile Giriş';return;}
+    const d=await res.json(); window.__dashboardData=d; link.textContent='Dashboard';
+    $('owner-tab').hidden=!d.isOwner;
+    const avatar=d.user.avatar?`https://cdn.discordapp.com/avatars/${d.user.id}/${d.user.avatar}.png?size=128`:'';
+    card.innerHTML=`<div class="feature profile-preview"><div class="avatar-ring">${avatar?`<img src="${avatar}" alt="">`:'👤'}</div><h3>${escapeHtml(d.user.global_name||d.user.username)}</h3><p>Discord hesabınla giriş yaptın.</p><button class="btn btn-ghost" id="logout-btn">Çıkış yap</button></div><div class="feature"><span>🏠</span><h3>Sunucuların (${d.guilds.length})</h3><p>${d.guilds.slice(0,12).map(g=>`${g.botPresent?'🟢':'⚪'} <strong>${escapeHtml(g.name)}</strong>${g.botPresent?' — Bot aktif':' — Bot ekli değil'}`).join('<br>')||'Sunucu bulunamadı.'}</p></div>`;
+    $('logout-btn').onclick=async()=>{await fetch('/auth/logout',{method:'POST'});location.reload();};
+  }catch(_){}
 }
 
-async function renderProfile() {
-  const wrap = $('profile-content');
-  try {
-    const res = await fetch('/api/profile',{cache:'no-store'});
-    if (!res.ok) return;
-    const {profile:p}=await res.json();
-    wrap.innerHTML=`
-      <form class="profile-form" id="profile-form">
-        <label>Görünen ad<input name="displayName" maxlength="32" value="${escapeHtml(p.displayName)}"></label>
-        <label>Biyografi<textarea name="bio" maxlength="120">${escapeHtml(p.bio)}</textarea></label>
-        <label>Durum<input name="status" maxlength="32" value="${escapeHtml(p.status)}"></label>
-        <label>Vurgu rengi<input name="accent" type="color" value="${escapeHtml(p.accent)}"></label>
-        <label class="check"><input name="compact" type="checkbox" ${p.compact?'checked':''}> Kompakt görünüm</label>
-        <label class="check"><input name="animated" type="checkbox" ${p.animated?'checked':''}> Animasyonları açık tut</label>
-        <button class="btn btn-primary" type="submit">💾 Profili Kaydet</button>
-        <span id="profile-msg" class="save-msg"></span>
-      </form>`;
-    const form=$('profile-form');
-    form.onsubmit=async(e)=>{e.preventDefault();const f=new FormData(form);const body={displayName:f.get('displayName'),bio:f.get('bio'),status:f.get('status'),accent:f.get('accent'),compact:f.has('compact'),animated:f.has('animated')};const r=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const out=await r.json();if(out.ok){applyProfile(out.profile);$('profile-msg').textContent='✓ Kaydedildi';}};
-    applyProfile(p);
-  } catch (_) {}
-}
 function applyProfile(p){document.documentElement.style.setProperty('--accent',p.accent||'#8b5cf6');document.body.classList.toggle('compact-mode',!!p.compact);document.body.classList.toggle('no-anim',p.animated===false);}
-function renderAdmin(d){
-  const g=d.guilds.find(x=>x.id==='1383133767945945219');
-  const wrap=$('admin-content');
-  if(!g){wrap.innerHTML='<div class="panel-empty">Bu sunucu için yetkin yok.</div>';return;}
-  wrap.innerHTML=`<article class="server-card"><div class="server-icon">${g.icon?`<img src="https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png?size=96" alt="">`:'🏠'}</div><div class="server-main"><h3>${escapeHtml(g.name)}</h3><p>${g.botPresent?'🟢 Bot bağlı ve hazır':'⚪ Bot bu sunucuda değil'}</p><div class="quick-settings"><span>🛡️ Moderasyon</span><span>🎫 Ticket</span><span>💡 Öneri</span><span>🤖 AI</span></div></div></article>`;
-}
+function openOwnerPanel(view){const d=window.__dashboardData;if(!d||!d.isOwner)return;const m=$('owner-modal');m.hidden=false;document.body.classList.add('modal-open');document.querySelectorAll('.owner-menu').forEach(x=>x.classList.toggle('active',x.dataset.view===view));if(view==='admin')renderOwnerAdmin(d);else renderOwnerProfile();}
+function closeOwnerPanel(){$('owner-modal').hidden=true;document.body.classList.remove('modal-open');}
+function renderOwnerAdmin(d){const list=d.guilds.filter(g=>g.owner||((Number(g.permissions)&8)===8));$('owner-view').innerHTML=`<div class="owner-hero"><div><span class="owner-kicker">YÖNETİCİ</span><h3>Sunucu Yönetimi</h3><p>${list.length} yönetilebilir sunucu bulundu.</p></div><span class="owner-status">● AKTİF</span></div><div class="owner-server-list">${list.map(g=>`<article class="owner-server"><div class="server-icon">${g.icon?`<img src="https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png?size=96" alt="">`:'🏠'}</div><div class="server-main"><strong>${escapeHtml(g.name)}</strong><small>${g.botPresent?'🟢 Bot bağlı':'⚪ Bot bu sunucuda değil'}</small></div><div class="owner-actions"><button class="mini-btn">🛡️ Moderasyon</button><button class="mini-btn">🎫 Ticket</button><button class="mini-btn">💡 Öneriler</button></div></article>`).join('')||'<div class="panel-empty">Yönetilebilir sunucu bulunamadı.</div>'}</div>`;}
+async function renderOwnerProfile(){try{const r=await fetch('/api/profile',{cache:'no-store'});if(!r.ok)return;const {profile:p}=await r.json();$('owner-view').innerHTML=`<form class="profile-form owner-profile-form" id="owner-profile-form"><label>Görünen ad<input name="displayName" maxlength="32" value="${escapeHtml(p.displayName)}"></label><label>Durum<input name="status" maxlength="32" value="${escapeHtml(p.status)}"></label><label class="full">Biyografi<textarea name="bio" maxlength="120">${escapeHtml(p.bio)}</textarea></label><label>Vurgu rengi<input name="accent" type="color" value="${escapeHtml(p.accent)}"></label><label class="check"><input name="compact" type="checkbox" ${p.compact?'checked':''}> Kompakt görünüm</label><label class="check"><input name="animated" type="checkbox" ${p.animated?'checked':''}> Animasyonları açık tut</label><button class="btn btn-primary full" type="submit">💾 Değişiklikleri Kaydet</button><span id="profile-msg" class="save-msg"></span></form>`;$('owner-profile-form').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const body={displayName:f.get('displayName'),bio:f.get('bio'),status:f.get('status'),accent:f.get('accent'),compact:f.has('compact'),animated:f.has('animated')};const r=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),v=await r.json();if(v.ok){applyProfile(v.profile);$('profile-msg').textContent='✓ Kaydedildi';}};}catch(_){}}
+document.addEventListener('click',e=>{if(e.target.id==='owner-tab')openOwnerPanel('admin');if(e.target.id==='owner-close'||e.target.id==='owner-x')closeOwnerPanel();const x=e.target.closest('.owner-menu');if(x)openOwnerPanel(x.dataset.view);});
