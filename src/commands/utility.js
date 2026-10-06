@@ -6,7 +6,7 @@ const { latestUpdate, UPDATES } = require('../updateLog');
 const { sendPanel: sendTicketPanel } = require('../tickets');
 const { snapshot: getSnapshot } = require('../stats');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
-const play = require('play-dl');
+const play = require('@iamtraction/play-dl');
 const musicState = new Map();
 function getMusic(guildId) { return musicState.get(guildId) || null; }
 function requireVoice(i) { const ch = i.member?.voice?.channel; if (!ch) { fail(i, '🔊 Önce bir ses kanalına gir.'); return null; } return ch; }
@@ -15,7 +15,8 @@ async function playYoutube(i, url) {
   if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url)) return fail(i, '❌ Sadece YouTube linki kabul ediyorum.');
   await i.deferReply();
   try {
-    const info = await play.video_info(url); const title = info.video_details?.title || 'YouTube';
+    const info = await play.video_info(url);
+    const title = info.video_details?.title || 'YouTube';
     const stream = await play.stream(url, { discordPlayerCompatibility: true });
     const old = musicState.get(i.guild.id); if (old?.player) old.player.stop();
     const connection = joinVoiceChannel({ channelId: ch.id, guildId: ch.guild.id, adapterCreator: ch.guild.voiceAdapterCreator, selfDeaf: true });
@@ -24,7 +25,13 @@ async function playYoutube(i, url) {
     player.once(AudioPlayerStatus.Idle, () => { if (musicState.get(i.guild.id)?.player === player) musicState.delete(i.guild.id); });
     connection.on(VoiceConnectionStatus.Disconnected, () => { if (musicState.get(i.guild.id)?.connection === connection) musicState.delete(i.guild.id); });
     return i.editReply({ embeds: [emb('🎵 FREEBUFF Müzik', '▶️ **' + title + '**\\n🔗 ' + url + '\\n🔊 **' + ch.name + '** kanalında çalıyor.', COLORS.info)] });
-  } catch (e) { console.error('[music] YouTube oynatma hatası:', e.message); return i.editReply({ embeds: [emb('❌ Müzik Hatası', 'YouTube videosu oynatılamadı. Linki kontrol et veya başka bir video dene.', COLORS.err)] }); }
+  } catch (e) {
+    console.error('[music] YouTube oynatma hatası:', e);
+    const detail = /Sign in|bot|403|410|unavailable|age/i.test(e.message || '')
+      ? 'YouTube bu videoyu bot erişimine kapatmış olabilir. Başka bir video/link dene.'
+      : 'Ses akışı alınamadı. Birkaç saniye sonra tekrar dene.';
+    return i.editReply({ embeds: [emb('❌ Müzik Hatası', detail + '\\n\\n**Teknik:** \`' + String(e.message || 'bilinmeyen hata').slice(0, 160) + '\`', COLORS.err)] });
+  }
 }
 
 
