@@ -1,5 +1,6 @@
 'use strict';
 const { rand, pick } = require('./helpers');
+const suggestions = require('./suggestions');
 
 // Prefix commands: message-based fallbacks so total command count > 100
 const coins = {};
@@ -15,6 +16,7 @@ const commands = {
     'Yardımcı: `!ping !uptime !help !avatar !sehir !emoji !zaman !bilgi !komutSayi`',
     'Eğlence: `!zar !yazitura !8ball !asikarsin !seviye !terscevir !saka !gif !sarki`',
     'Moderasyon: `!ban !kick !mute !uyari !temizle !kilit !yavas`',
+    'Öneri: mesajı yanıtlayıp .kabul yaz (Yönetici)',
     'Ekonomi: `!bakiye !gunluk !calis !transfer !siralama`',
     'Toplam **130** komut var — tam liste için `/yardim` yaz.'
   ].join('\n')),
@@ -108,6 +110,19 @@ const commands = {
     if (!deleted) return msg.reply('Silinemedi (14 gün sınırı).');
     const m = await msg.reply(`🗑️ ${deleted.size} mesaj silindi.`);
     setTimeout(() => m.delete().catch(() => {}), 3000);
+  },
+  kabul: async (msg) => {
+    if (!msg.guild) return msg.reply('❌ Bu komut sadece sunucuda kullanılabilir.');
+    if (!msg.member.permissions.has('Administrator')) return msg.reply('❌ Bu komutu sadece sunucu yöneticisi kullanabilir.');
+    if (msg.channel.name !== '💡・öneriler') return msg.reply('❌ `.kabul` sadece **💡・öneriler** kanalında kullanılabilir.');
+    if (!msg.reference?.messageId) return msg.reply('❌ `.kabul` komutunu kabul etmek istediğin öneri mesajına **yanıtlayarak** yaz.');
+    const target = await msg.channel.messages.fetch(msg.reference.messageId).catch(() => null);
+    if (!target) return msg.reply('❌ Öneri mesajı bulunamadı.');
+    if (target.author.bot) return msg.reply('❌ Bot mesajı öneri olarak kabul edilemez.');
+    if (!target.content.trim()) return msg.reply('❌ Bu öneri mesajında metin yok.');
+    suggestions.approve({ guildId: msg.guild.id, channelId: msg.channel.id, messageId: target.id, authorId: target.author.id, authorTag: target.author.tag, content: target.content.trim(), approvedBy: msg.author.id, approvedByTag: msg.author.tag });
+    await target.react('✅').catch(() => {});
+    return msg.reply({ content: '✅ **Öneri kabul edildi!**\n\n📌 Bu öneri arka planda kaydedildi ve sonraki otomasyon için hazır.', allowedMentions: { repliedUser: false } });
   },
   tlock: async (msg, args) => {
     if (!msg.member.permissions.has('ManageChannels')) return msg.reply('❌ Yetkin yok.');
