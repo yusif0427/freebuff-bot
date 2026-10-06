@@ -22,6 +22,7 @@ const BOT_NAME = process.env.BOT_NAME || 'Freebuff Bot';
 const sessions = new Map();
 const oauthStates = new Map();
 const profiles = new Map();
+const OWNER_USER_ID = process.env.ADMIN_USER_ID || '1383133767945945219';
 const OAUTH_API = 'https://discord.com/api/v10';
 
 function sessionUser(req) { const sid = req.headers.cookie?.match(/(?:^|; )fb_session=([^;]+)/)?.[1]; return sid ? sessions.get(sid) : null; }
@@ -140,7 +141,7 @@ app.get('/api/me', (req, res) => {
   const s = sessionUser(req);
   if (!s || s.expiresAt < Date.now()) return jsonError(res, 401, 'Giriş yapmalısın.');
   const botGuilds = new Set(client.guilds.cache.keys());
-  res.json({ user: s.user, guilds: s.guilds.map(g => ({ id:g.id, name:g.name, icon:g.icon, owner:g.owner, permissions:g.permissions, botPresent:botGuilds.has(g.id) })) });
+  res.json({ user: s.user, isOwner: s.user.id === OWNER_USER_ID, guilds: s.guilds.map(g => ({ id:g.id, name:g.name, icon:g.icon, owner:g.owner, permissions:g.permissions, botPresent:botGuilds.has(g.id) })) });
 });
 
 app.listen(PORT, () => {
