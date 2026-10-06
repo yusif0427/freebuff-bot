@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { emb, ok, fail, reply, COLORS, pick } = require('../helpers');
 const { renderCommandList } = require('../imageUi');
 const { latestUpdate, UPDATES } = require('../updateLog');
+const { sendPanel: sendTicketPanel } = require('../tickets');
 const { snapshot: getSnapshot } = require('../stats');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
 const play = require('play-dl');
@@ -125,6 +126,15 @@ const commands = [
     async execute(i) {
       const lines = UPDATES.map(u => '### UPDATE ' + u.version + ' — ' + u.title + '\\n' + u.items.map(x => '• ' + x).join('\\n')).join('\\n\\n');
       return ok(i, '🆕 FREEBUFF Güncellemeleri', lines);
+    }
+  },
+  {
+    name: 'ticket-panel',
+    description: 'Küçük ve şık ticket açma panelini gönderir',
+    options: [],
+    default_member_permissions: '268435456',
+    async execute(i) {
+      return sendTicketPanel(i);
     }
   },
   {
