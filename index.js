@@ -66,8 +66,10 @@ app.get('/api/health', (req, res) => res.json({ ok: true, uptime: process.uptime
 // Discord OAuth2 dashboard. Secrets stay server-side; the browser never receives them.
 app.get('/auth/discord', (req, res) => {
   const clientId = process.env.CLIENT_ID;
-  const redirect = process.env.DISCORD_REDIRECT_URI;
-  if (!clientId || !redirect || !process.env.DISCORD_CLIENT_SECRET) return res.status(503).send('Discord dashboard OAuth ayarlanmamış.');
+  const redirect = process.env.DISCORD_REDIRECT_URI || (process.env.PUBLIC_URL ? new URL('/auth/callback', process.env.PUBLIC_URL).toString() : null);
+  if (!clientId || !redirect || !process.env.DISCORD_CLIENT_SECRET) {
+    return res.status(503).send('Discord giriş sistemi hazır değil. Render Environment bölümünde CLIENT_ID, DISCORD_CLIENT_SECRET ve DISCORD_REDIRECT_URI (veya PUBLIC_URL) ayarlanmalı.');
+  }
   const state = require('crypto').randomBytes(24).toString('hex');
   oauthStates.set(state, Date.now());
   setTimeout(() => oauthStates.delete(state), 10 * 60_000).unref();
@@ -80,7 +82,9 @@ app.get('/auth/callback', async (req, res) => {
   if (!code || !state || !oauthStates.has(state)) return res.status(400).send('Geçersiz OAuth isteği.');
   oauthStates.delete(state);
   try {
-    const body = new URLSearchParams({ client_id: process.env.CLIENT_ID, client_secret: process.env.DISCORD_CLIENT_SECRET, grant_type: 'authorization_code', code: String(code), redirect_uri: process.env.DISCORD_REDIRECT_URI });
+    const redirect = process.env.DISCORD_REDIRECT_URI || (process.env.PUBLIC_URL ? new URL('/auth/callback', process.env.PUBLIC_URL).toString() : null);
+    if (!redirect) throw new Error('redirect');
+    const body = new URLSearchParams({ client_id: process.env.CLIENT_ID, client_secret: process.env.DISCORD_CLIENT_SECRET, grant_type: 'authorization_code', code: String(code), redirect_uri: redirect });
     const tokenRes = await fetch(OAUTH_API + '/oauth2/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
     if (!tokenRes.ok) throw new Error('token');
     const token = await tokenRes.json();
@@ -94,7 +98,7 @@ app.get('/auth/callback', async (req, res) => {
     sessions.set(sid, { user, guilds, expiresAt: Date.now() + 7 * 86400_000 });
     res.setHeader('Set-Cookie', `fb_session=${sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800`);
     res.redirect('/#dashboard');
-  } catch (e) { res.status(502).send('Discord girişi başarısız.'); }
+  } catch (e) { console.error('[oauth] callback hatasi:', e.message); res.status(502).send('Discord girişi başarısız. Render Environment ve Discord Developer Portal Redirect URI ayarlarını kontrol et.'); }
 });
 app.post('/auth/logout', (req, res) => {
   const sid = req.headers.cookie?.match(/(?:^|; )fb_session=([^;]+)/)?.[1];
