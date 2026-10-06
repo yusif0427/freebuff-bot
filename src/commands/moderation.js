@@ -234,14 +234,121 @@ const commands = [
   },
   {
     name: 'sunucu-kur',
-    description: 'Gelişmiş Freebuff kategori, metin ve çoklu ses kanalı yapısını kurar',
+    description: 'Roller, izinler, kategoriler, ticket ve çoklu ses odalarını kurar',
     options: [],
     default_member_permissions: String(PermissionFlagsBits.Administrator),
     async execute(i) {
       const { ChannelType } = require('discord.js');
-      const plan = [
+      await i.deferReply({ ephemeral: true });
+
+      const rolePlan = [
         {
-          cat: '📁 FREEBUFF • ANA',
+          name: 'FREEBUFF Yönetim',
+          color: 0xef4444,
+          permissions: [
+            PermissionFlagsBits.ManageGuild,
+            PermissionFlagsBits.ManageChannels,
+            PermissionFlagsBits.ManageMessages,
+            PermissionFlagsBits.KickMembers,
+            PermissionFlagsBits.BanMembers,
+            PermissionFlagsBits.ModerateMembers,
+            PermissionFlagsBits.MoveMembers,
+            PermissionFlagsBits.ManageRoles,
+            PermissionFlagsBits.ViewAuditLog
+          ]
+        },
+        {
+          name: 'FREEBUFF Moderatör',
+          color: 0xf59e0b,
+          permissions: [
+            PermissionFlagsBits.ManageMessages,
+            PermissionFlagsBits.KickMembers,
+            PermissionFlagsBits.ModerateMembers,
+            PermissionFlagsBits.MoveMembers,
+            PermissionFlagsBits.ViewAuditLog
+          ]
+        },
+        {
+          name: '🎫 Destek',
+          color: 0x5865f2,
+          permissions: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ReadMessageHistory
+          ]
+        },
+        {
+          name: '🎵 DJ',
+          color: 0x8b5cf6,
+          permissions: [
+            PermissionFlagsBits.Connect,
+            PermissionFlagsBits.Speak,
+            PermissionFlagsBits.UseVAD
+          ]
+        },
+        {
+          name: 'FREEBUFF Üye',
+          color: 0x64748b,
+          permissions: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ReadMessageHistory,
+            PermissionFlagsBits.Connect,
+            PermissionFlagsBits.Speak
+          ]
+        }
+      ];
+
+      const roles = {};
+      let rolesCreated = 0;
+      for (const plan of rolePlan) {
+        let role = i.guild.roles.cache.find(r => r.name === plan.name);
+        if (!role) {
+          role = await i.guild.roles.create({
+            name: plan.name,
+            color: plan.color,
+            permissions: plan.permissions,
+            reason: 'FREEBUFF /sunucu-kur UPDATE 11'
+          }).catch(() => null);
+          if (role) rolesCreated++;
+        }
+        if (role) roles[plan.name] = role;
+      }
+
+      const everyone = i.guild.roles.everyone;
+      const modRoles = [roles['FREEBUFF Yönetim'], roles['FREEBUFF Moderatör']].filter(Boolean);
+      const support = roles['🎫 Destek'];
+      const dj = roles['🎵 DJ'];
+
+      const createCategory = async (name, overwrites = []) => {
+        let cat = i.guild.channels.cache.find(c => c.type === ChannelType.GuildCategory && c.name === name);
+        if (cat) return { channel: cat, created: false };
+        const channel = await i.guild.channels.create({
+          name,
+          type: ChannelType.GuildCategory,
+          permissionOverwrites: overwrites,
+          reason: 'FREEBUFF /sunucu-kur UPDATE 11'
+        }).catch(() => null);
+        return { channel, created: Boolean(channel) };
+      };
+
+      const normalOverwrites = [
+        { id: everyone.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] }
+      ];
+      const managementOverwrites = [
+        { id: everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+        ...modRoles.map(r => ({ id: r.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] }))
+      ];
+      const ticketOverwrites = [
+        { id: everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+        ...(support ? [{ id: support.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] }] : []),
+        { id: i.client.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageChannels] }
+      ];
+
+      const groups = [
+        {
+          name: '📁 FREEBUFF • ANA',
+          overwrites: normalOverwrites,
           channels: [
             ['📜・kurallar', ChannelType.GuildText],
             ['📢・duyurular', ChannelType.GuildText],
@@ -252,7 +359,8 @@ const commands = [
           ]
         },
         {
-          cat: '🎮 OYUN • EĞLENCE',
+          name: '🎮 OYUN • EĞLENCE',
+          overwrites: normalOverwrites,
           channels: [
             ['🎮・oyun', ChannelType.GuildText],
             ['😂・meme', ChannelType.GuildText],
@@ -263,7 +371,8 @@ const commands = [
           ]
         },
         {
-          cat: '🛡️ YÖNETİM • LOG',
+          name: '🛡️ YÖNETİM • LOG',
+          overwrites: managementOverwrites,
           channels: [
             ['📊・istatistik', ChannelType.GuildText],
             ['🛡️・mod-log', ChannelType.GuildText],
@@ -272,47 +381,42 @@ const commands = [
           ]
         },
         {
-          cat: '🌙 SES • SOHBET',
+          name: '🌙 SES • SOHBET',
+          overwrites: normalOverwrites,
           channels: [
             ['🔊・Sohbet 1', ChannelType.GuildVoice],
             ['🔊・Sohbet 2', ChannelType.GuildVoice],
+            ['🔊・Sohbet 3', ChannelType.GuildVoice],
             ['🔊・AFK', ChannelType.GuildVoice]
           ]
+        },
+        {
+          name: '🎫・TICKETS',
+          overwrites: ticketOverwrites,
+          channels: []
         }
       ];
 
-      await i.deferReply({ ephemeral: true });
       let created = 0, existing = 0, failed = 0;
-
-      for (const group of plan) {
-        let cat = i.guild.channels.cache.find(x => x.type === ChannelType.GuildCategory && x.name === group.cat);
-        if (!cat) {
-          cat = await i.guild.channels.create({
-            name: group.cat,
-            type: ChannelType.GuildCategory,
-            reason: 'FREEBUFF /sunucu-kur'
-          }).catch(() => null);
-          if (cat) created++;
-        } else {
-          existing++;
-        }
-
-        if (!cat) {
-          failed += group.channels.length;
-          continue;
-        }
-
+      for (const group of groups) {
+        const result = await createCategory(group.name, group.overwrites);
+        if (!result.channel) { failed += group.channels.length + 1; continue; }
+        result.created ? created++ : existing++;
         for (const [name, type] of group.channels) {
-          const found = i.guild.channels.cache.find(x => x.name === name && x.parentId === cat.id);
-          if (found) {
-            existing++;
-            continue;
-          }
+          const found = i.guild.channels.cache.find(x => x.name === name && x.parentId === result.channel.id);
+          if (found) { existing++; continue; }
+          const overwrite = type === ChannelType.GuildVoice && dj
+            ? [
+                { id: everyone.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak] },
+                { id: dj.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.UseVAD] }
+              ]
+            : group.overwrites;
           const made = await i.guild.channels.create({
             name,
             type,
-            parent: cat.id,
-            reason: 'FREEBUFF /sunucu-kur',
+            parent: result.channel.id,
+            permissionOverwrites: overwrite,
+            reason: 'FREEBUFF /sunucu-kur UPDATE 11',
             ...(type === ChannelType.GuildVoice ? { userLimit: 0 } : {})
           }).catch(() => null);
           if (made) created++;
@@ -322,12 +426,12 @@ const commands = [
 
       return ok(
         i,
-        '🏗️ Sunucu Kurulumu • UPDATE 10',
-        'Gelişmiş Freebuff altyapısı hazır.\\n' +
-        '📦 Oluşturulan: **' + created + '**\\n' +
-        '♻️ Zaten vardı: **' + existing + '**\\n' +
-        '⚠️ Oluşturulamayan: **' + failed + '**\\n\\n' +
-        '🔊 Çoklu ses odaları + 🛡️ yönetim/log + 🎮 oyun/eğlence + 📁 ana kategori hazır.'
+        '🏗️ Sunucu Kurulumu • UPDATE 11',
+        '🧩 **Roller:** ' + rolesCreated + ' yeni rol\\n' +
+        '📦 **Kanallar/kategoriler:** ' + created + ' yeni, ' + existing + ' mevcut\\n' +
+        '⚠️ **Başarısız:** ' + failed + '\\n\\n' +
+        '🛡️ Yönetim + Moderatör + 🎫 Destek + 🎵 DJ + Üye rolleri hazır.\\n' +
+        '🎫 Ticket kategorisi + 🔊 4 ses odası + yönetim izinleri + oyun/ana kanallar hazır.'
       );
     }
   },
