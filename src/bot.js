@@ -137,6 +137,13 @@ client.once(Events.ClientReady, (c) => {
   }
 });
 
+client.on(Events.GuildMemberAdd, async (member) => {
+  const role = member.guild.roles.cache.find(r => r.name === 'FREEBUFF Üye');
+  if (!role) return;
+  if (role.position >= member.guild.members.me.roles.highest.position) return;
+  await member.roles.add(role, 'FREEBUFF otomatik üye rolü').catch(() => {});
+});
+
 // --- slash interactions --------------------------------------------------
 client.on(Events.InteractionCreate, async (i) => {
   if (i.isButton() && i.customId.startsWith('freebuff:ticket:')) {
