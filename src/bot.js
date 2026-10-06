@@ -3,6 +3,7 @@ const { Client, GatewayIntentBits, Partials, REST, Routes, Collection, Events, A
 const stats = require('./stats');
 const prefix = require('./prefixCommands');
 const { storeSnipe } = require('./commands/moderation');
+const { handleInteraction: handleTicketInteraction } = require('./tickets');
 const community = require('./community');
 
 const CATEGORIES = ['moderation', 'server', 'utility', 'games', 'fun', 'economy'];
@@ -34,7 +35,8 @@ const DISABLED_SLASH_COMMANDS = new Set([
   'avatar',
   'banner',
   'sabitlenen',
-  'ilkmesaj'
+  'ilkmesaj',
+  'not'
 ]);
 
 for (const cat of CATEGORIES) {
@@ -64,7 +66,8 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates
   ],
   partials: [Partials.Channel, Partials.Message]
 });
@@ -136,8 +139,27 @@ client.once(Events.ClientReady, (c) => {
   }
 });
 
+client.on(Events.GuildMemberAdd, async (member) => {
+  const role = member.guild.roles.cache.find(r => r.name === 'FREEBUFF Üye');
+  if (!role) return;
+  if (role.position >= member.guild.members.me.roles.highest.position) return;
+  await member.roles.add(role, 'FREEBUFF otomatik üye rolü').catch(() => {});
+});
+
 // --- slash interactions --------------------------------------------------
 client.on(Events.InteractionCreate, async (i) => {
+  if (i.isButton() && i.customId.startsWith('freebuff:ticket:')) {
+    try {
+      await handleTicketInteraction(i);
+    } catch (e) {
+      console.error('[ticket] interaction hatası:', e);
+      try {
+        if (!i.replied && !i.deferred) await i.reply({ content: '❌ Ticket işlemi başarısız.', ephemeral: true });
+      } catch (_) {}
+    }
+    return;
+  }
+
   if (i.isStringSelectMenu() && i.customId === 'freebuff:help') {
     const category = i.values[0];
     const label = CATEGORY_LABELS[category] || category;
@@ -276,8 +298,11 @@ client.on(Events.MessageCreate, async (msg) => {
   }
 
   // prefix commands
-  if (!msg.content.startsWith(prefix.prefix)) return;
-  const args = msg.content.slice(prefix.prefix.length).trim().split(/\s+/);
+  const isBangPrefix = msg.content.startsWith(prefix.prefix);
+  const isDotLock = msg.content.startsWith('.tlock');
+  if (!isBangPrefix && !isDotLock) return;
+  const usedPrefix = isDotLock ? '.' : prefix.prefix;
+  const args = msg.content.slice(usedPrefix.length).trim().split(/\s+/);
   const name = (args.shift() || '').toLowerCase();
   const fn = prefix.commands[name];
   if (!fn) return;

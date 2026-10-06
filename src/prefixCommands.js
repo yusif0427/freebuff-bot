@@ -109,6 +109,15 @@ const commands = {
     const m = await msg.reply(`🗑️ ${deleted.size} mesaj silindi.`);
     setTimeout(() => m.delete().catch(() => {}), 3000);
   },
+  tlock: async (msg, args) => {
+    if (!msg.member.permissions.has('ManageChannels')) return msg.reply('❌ Yetkin yok.');
+    const id = String(args[0] || '').replace(/[^0-9]/g, '');
+    if (!id) return msg.reply('Kullanım: `.tlock KANAL_ID`');
+    const channel = await msg.guild.channels.fetch(id).catch(() => null);
+    if (!channel || !channel.isTextBased()) return msg.reply('❌ Geçerli bir metin kanalı ID\'si gir.');
+    await channel.permissionOverwrites.edit(msg.guild.roles.everyone, { SendMessages: false }, { reason: 'FREEBUFF .tlock' });
+    return msg.reply('🔒 <#' + channel.id + '> kilitlendi.');
+  },
   kilit: async (msg) => {
     if (!msg.member.permissions.has('ManageChannels')) return msg.reply('Yetkin yok.');
     await msg.channel.permissionOverwrites.edit(msg.guild.roles.everyone, { SendMessages: false });
