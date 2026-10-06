@@ -163,7 +163,7 @@ async function loadDashboard() {
   const card = $('dashboard-card'), link = $('login-link');
   try {
     const res = await fetch('/api/me', { cache: 'no-store' });
-    if (!res.ok) return;
+    if (!res.ok) { link.textContent = 'Discord ile Giriş'; return;}
     const d = await res.json();
     link.textContent = 'Dashboard';
     const avatar = d.user.avatar ? `https://cdn.discordapp.com/avatars/${d.user.id}/${d.user.avatar}.png?size=64` : '';
