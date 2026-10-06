@@ -11,7 +11,7 @@ function getMusic(guildId) { return musicState.get(guildId) || null; }
 function requireVoice(i) { const ch = i.member?.voice?.channel; if (!ch) { fail(i, '🔊 Önce bir ses kanalına gir.'); return null; } return ch; }
 async function playYoutube(i, url) {
   const ch = requireVoice(i); if (!ch) return;
-  if (!/^https?:\\/\\/(www\\.)?(youtube\\.com|youtu\\.be)\\//i.test(url)) return fail(i, '❌ Sadece YouTube linki kabul ediyorum.');
+  if (!/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(url)) return fail(i, '❌ Sadece YouTube linki kabul ediyorum.');
   await i.deferReply();
   try {
     const info = await play.video_info(url); const title = info.video_details?.title || 'YouTube';
