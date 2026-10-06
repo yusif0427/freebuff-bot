@@ -24,10 +24,17 @@ const SLASH_LIMIT = 100;
 // kaldırılır ama koddan silinmez. Böylece eski komutlar prefix ile çalışmaya
 // devam ederken Discord'daki / komut listesi limit altında kalır.
 const DISABLED_SLASH_COMMANDS = new Set([
+  // Discord uygulama komutlarında 100 üst seviye sınırı olduğu için
+  // daha az kullanılan 8 komut slash listesinden çıkarılır.
+  // Kodları silinmez; mevcut prefix/uygulama akışları korunur.
   'moon',
   'troll',
   'gif',
-  'lirik'
+  'lirik',
+  'avatar',
+  'banner',
+  'sabitlenen',
+  'ilkmesaj'
 ]);
 
 for (const cat of CATEGORIES) {
