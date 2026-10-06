@@ -167,9 +167,61 @@ async function loadDashboard() {
     const d = await res.json();
     link.textContent = 'Dashboard';
     const avatar = d.user.avatar ? `https://cdn.discordapp.com/avatars/${d.user.id}/${d.user.avatar}.png?size=64` : '';
+    const avatar = d.user.avatar ? `https://cdn.discordapp.com/avatars/${d.user.id}/${d.user.avatar}.png?size=128` : '';
     card.innerHTML = `
-      <div class="feature"><span>👤</span><h3>${escapeHtml(d.user.global_name || d.user.username)}</h3><p>Discord hesabınla giriş yaptın.</p><button class="btn btn-ghost" id="logout-btn">Çıkış yap</button></div>
-      <div class="feature"><span>🏠</span><h3>Sunucuların (${d.guilds.length})</h3><p>${d.guilds.slice(0,12).map(g => `${g.botPresent ? '🟢' : '⚪'} <strong>${escapeHtml(g.name)}</strong>${g.botPresent ? ' — Bot aktif' : ' — Bot ekli değil'}`).join('<br>') || 'Sunucu bulunamadı.'}</p></div>`;
+      <div class="feature profile-preview"><div class="avatar-ring">${avatar ? `<img src="${avatar}" alt="">` : '👤'}</div><h3>${escapeHtml(d.user.global_name || d.user.username)}</h3><p>Discord hesabınla giriş yaptın.</p><button class="btn btn-ghost" id="logout-btn">Çıkış yap</button></div>
+      <div class="feature"><span>🏠</span><h3>Sunucuların (${d.guilds.length})</h3><p>${d.guilds.slice(0,12).map(g => `${g.botPresent ? '🟢' : '⚪'} <strong>${escapeHtml(g.name)}</strong>${g.botPresent ? ' — Bot aktif' : ' — Bot ekli değil'}`).join('<br>') || 'Sunucu bulunamadı.'}</p><a class="btn btn-primary" href="#admin-panel">Admin Paneli</a></div>`;
     $('logout-btn').onclick = async () => { await fetch('/auth/logout',{method:'POST'}); location.reload(); };
+    await renderProfile(d);
+    renderAdmin(d);
   } catch (_) {}
+}
+
+
+async function renderProfile(d) {
+  const wrap = $('profile-content');
+  try {
+    const res = await fetch('/api/profile', {cache:'no-store'});
+    if (!res.ok) return;
+    const {profile:p} = await res.json();
+    wrap.innerHTML = `
+      <form class="profile-form" id="profile-form">
+        <label>Görünen ad<input name="displayName" maxlength="32" value="${escapeHtml(p.displayName)}"></label>
+        <label>Biyografi<textarea name="bio" maxlength="120">${escapeHtml(p.bio)}</textarea></label>
+        <label>Durum<input name="status" maxlength="32" value="${escapeHtml(p.status)}"></label>
+        <label>Vurgu rengi<input name="accent" type="color" value="${escapeHtml(p.accent)}"></label>
+        <label class="check"><input name="compact" type="checkbox" ${p.compact?'checked':''}> Kompakt görünüm</label>
+        <label class="check"><input name="animated" type="checkbox" ${p.animated?'checked':''}> Animasyonları açık tut</label>
+        <button class="btn btn-primary" type="submit">💾 Profili Kaydet</button>
+        <span id="profile-msg" class="save-msg"></span>
+      </form>`;
+    const form = $('profile-form');
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const f = new FormData(form);
+      const body = {displayName:f.get('displayName'),bio:f.get('bio'),status:f.get('status'),accent:f.get('accent'),compact:f.has('compact'),animated:f.has('animated')};
+      const r = await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const out = await r.json();
+      if (out.ok) { applyProfile(out.profile); $('profile-msg').textContent='✓ Kaydedildi'; }
+    };
+    applyProfile(p);
+  } catch (_) {}
+}
+function applyProfile(p) {
+  document.documentElement.style.setProperty('--accent', p.accent || '#8b5cf6');
+  document.body.classList.toggle('compact-mode', !!p.compact);
+  document.body.classList.toggle('no-anim', p.animated === false);
+}
+function renderAdmin(d) {
+  const admin = d.guilds.filter(g => g.owner || ((Number(g.permissions) & 8) === 8) || ((Number(g.permissions) & 32) === 32));
+  const wrap = $('admin-content');
+  if (!admin.length) { wrap.innerHTML='<div class="panel-empty">Bu hesapda yönetici olduğun sunucu görünmür.</div>'; return; }
+  wrap.innerHTML = admin.map(g => `
+    <article class="server-card">
+      <div class="server-icon">${g.icon ? `<img src="https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png?size=96" alt="">` : '🏠'}</div>
+      <div class="server-main"><h3>${escapeHtml(g.name)}</h3><p>${g.botPresent ? '🟢 Bot bağlı ve hazır' : '⚪ Bot bu sunucuda değil'}</p>
+      <div class="quick-settings"><span>🛡️ Moderasyon</span><span>🎫 Ticket</span><span>💡 Öneri</span><span>🤖 AI</span></div>
+      </div>
+      <button class="btn btn-primary server-action" onclick="location.href='#komutlar'">${g.botPresent ? '⚙️ Paneli Aç' : '➕ Botu Ekle'}</button>
+    </article>`).join('');
 }

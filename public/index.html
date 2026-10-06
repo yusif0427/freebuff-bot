@@ -16,6 +16,8 @@
       </a>
       <nav>
         <a href="#ozellikler">Özellikler</a>
+        <a href="#admin-panel">Admin</a>
+        <a href="#profile-panel">Profil</a>
         <a href="#istatistik">İstatistikler</a>
         <a href="#komutlar">Komutlar</a>
         <a href="#dashboard" id="login-link" class="nav-cta">Discord ile Giriş</a>
@@ -94,10 +96,16 @@
     <div class="container">
       <h2>🎛️ Sunucu Dashboard <span class="pill pill-ai">AI AKTİF</span></h2>
       <p class="section-sub">Discord hesabınla güvenli şekilde giriş yap. Kabul edilen önerilerin AI analizleri öneri sahibine DM olarak gönderilir.</p>
-      <div id="dashboard-card" class="feature-grid">
-        <div class="feature"><span>🔐</span><h3>Discord ile giriş</h3><p>Sunucularını görüntüle ve dashboardu kullan.</p><a class="btn btn-primary" href="/auth/discord">Discord ile Kayıt / Giriş</a></div>
-      <div class="feature ai-card"><span>🤖</span><h3>AI Öneri Sistemi</h3><p><code>.kabul</code> ile kabul edilen öneri analiz edilir ve sonuç otomatik olarak öneriyi gönderen kişinin Discord DM kutusuna gönderilir.</p></div>
+      <div id="dashboard-card" class="dashboard-grid">
+        <div class="feature login-card"><span>🔐</span><h3>Discord ile giriş</h3><p>Profilini özelleştir, sunucularını yönet ve admin paneline eriş.</p><a class="btn btn-primary" href="/auth/discord">Discord ile Kayıt / Giriş</a></div>
+        <div class="feature ai-card"><span>🤖</span><h3>AI Öneri Sistemi</h3><p><code>.kabul</code> ile kabul edilen öneri analiz edilir ve sonuç otomatik olarak öneriyi gönderen kişinin Discord DM kutusuna gönderilir.</p></div>
       </div>
+    </div>
+  
+  <section id="admin-panel" class="admin-panel">
+    <div class="container">
+      <div class="panel-head"><div><h2>🛡️ Admin Panel</h2><p class="section-sub">Yönetici olduğun sunucular, bot durumu ve hızlı ayarlar.</p></div><span class="panel-live">● PANEL HAZIR</span></div>
+      <div id="admin-content" class="admin-grid"><div class="panel-empty">Discord ile giriş yaptığında admin paneli açılacaq.</div></div>
     </div>
   </section>
 
@@ -106,6 +114,12 @@
       <h2>Hemen ekle, 2 dakikada hazır</h2>
       <p>Botu sunucuna ekledikten sonra <code>/yardim</code> yaz — tüm komutları görürsün.</p>
       <a class="btn btn-primary btn-lg" id="davet-2" href="#" target="_blank" rel="noopener">➕ Sunucuya Ekle</a>
+    </div>
+  
+  <section id="profile-panel" class="profile-panel">
+    <div class="container">
+      <div class="panel-head"><div><h2>🎨 Profilini Özelleştir</h2><p class="section-sub">Site içindeki profil kartını özelleştir.</p></div><span class="panel-live">● KİŞİSEL</span></div>
+      <div id="profile-content" class="profile-grid"><div class="panel-empty">Discord ile giriş yapınca profil ayarları açılacaq.</div></div>
     </div>
   </section>
 
