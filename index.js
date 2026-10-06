@@ -21,6 +21,7 @@ const PORT = process.env.PORT || 3000;
 const BOT_NAME = process.env.BOT_NAME || 'Freebuff Bot';
 const sessions = new Map();
 const oauthStates = new Map();
+const profiles = new Map();
 const OAUTH_API = 'https://discord.com/api/v10';
 
 function sessionUser(req) { const sid = req.headers.cookie?.match(/(?:^|; )fb_session=([^;]+)/)?.[1]; return sid ? sessions.get(sid) : null; }
@@ -100,6 +101,35 @@ app.get('/auth/callback', async (req, res) => {
     res.redirect('/#dashboard');
   } catch (e) { console.error('[oauth] callback hatasi:', e.message); res.status(502).send('Discord girişi başarısız. Render Environment ve Discord Developer Portal Redirect URI ayarlarını kontrol et.'); }
 });
+app.get('/api/profile', (req, res) => {
+  const s = sessionUser(req);
+  if (!s || s.expiresAt < Date.now()) return jsonError(res, 401, 'Giriş yapmalısın.');
+  const saved = profiles.get(s.user.id) || {};
+  res.json({ profile: {
+    displayName: saved.displayName || s.user.global_name || s.user.username || '',
+    bio: saved.bio || 'FREEBUFF kullanıcısı',
+    status: saved.status || 'Çevrimiçi',
+    accent: saved.accent || '#8b5cf6',
+    compact: !!saved.compact,
+    animated: saved.animated !== false
+  }});
+});
+app.post('/api/profile', express.json({ limit: '4kb' }), (req, res) => {
+  const s = sessionUser(req);
+  if (!s || s.expiresAt < Date.now()) return jsonError(res, 401, 'Giriş yapmalısın.');
+  const b = req.body || {};
+  const clean = {
+    displayName: String(b.displayName || '').trim().slice(0, 32),
+    bio: String(b.bio || '').trim().slice(0, 120),
+    status: String(b.status || 'Çevrimiçi').trim().slice(0, 32),
+    accent: /^#[0-9a-fA-F]{6}$/.test(String(b.accent || '')) ? String(b.accent) : '#8b5cf6',
+    compact: !!b.compact,
+    animated: b.animated !== false
+  };
+  profiles.set(s.user.id, clean);
+  res.json({ ok: true, profile: clean });
+});
+
 app.post('/auth/logout', (req, res) => {
   const sid = req.headers.cookie?.match(/(?:^|; )fb_session=([^;]+)/)?.[1];
   if (sid) sessions.delete(sid);
