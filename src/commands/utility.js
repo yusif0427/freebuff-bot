@@ -2,6 +2,7 @@
 const crypto = require('crypto');
 const { emb, ok, fail, reply, COLORS, pick } = require('../helpers');
 const { renderCommandList } = require('../imageUi');
+const { latestUpdate, UPDATES } = require('../updateLog');
 const { snapshot: getSnapshot } = require('../stats');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
 const play = require('play-dl');
@@ -115,8 +116,15 @@ const commands = [
       }
       const groups = {};
       for (const c of active) { const label = i.client.CATEGORY_LABELS?.[c.category] || '📚 Diğer'; (groups[label] ||= []).push(c); }
-      const png = await renderCommandList(groups, i.guild?.name || 'FREEBUFF Sunucusu');
-      return i.reply({ __skipFreebuffUi: true, content: '📚 **FREEBUFF KOMUTLARI** — Tüm aktif komutlar görselde.', files: [{ attachment: png, name: 'freebuff-komutlar.png' }] });
+      const png = await renderCommandList(groups, i.guild?.name || 'FREEBUFF Sunucusu', latestUpdate());
+      return i.reply({ content: '📚 **FREEBUFF KOMUTLARI** — Komutlar ve UPDATE bilgisi görselde.', files: [{ attachment: png, name: 'freebuff-komutlar.png' }] });
+    }
+  },
+  {
+    name: 'guncelleme', description: 'Son FREEBUFF güncellemelerini gösterir', options: [],
+    async execute(i) {
+      const lines = UPDATES.map(u => '### UPDATE ' + u.version + ' — ' + u.title + '\\n' + u.items.map(x => '• ' + x).join('\\n')).join('\\n\\n');
+      return ok(i, '🆕 FREEBUFF Güncellemeleri', lines);
     }
   },
   {
