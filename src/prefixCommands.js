@@ -126,12 +126,19 @@ const commands = {
     suggestions.approve(suggestion);
     await target.react('✅').catch(() => {});
 
-    const status = await msg.reply({ content: '🤖 **AI öneriyi inceliyor...**', allowedMentions: { repliedUser: false } });
+    const status = await msg.reply({ content: '🤖 **AI öneriyi inceliyor ve sonuç DM ile gönderilecek...**', allowedMentions: { repliedUser: false } });
     try {
       const answer = await analyzeSuggestion(suggestion);
       const chunks = answer.match(/[\\s\\S]{1,1800}/g) || ['AI yanıt üretmedi.'];
       await status.edit({ content: '🤖 **AI analizi:**\\n\\n' + chunks[0] });
-      for (let i = 1; i < chunks.length; i++) await msg.channel.send({ content: chunks[i] });
+      for (let i = 1; i < chunks.length; i++) await msg.channel.send({ content: chunks[i] });\n      const dm = [
+        '🤖 **FREEBUFF AI — Öneri sonucu**',
+        '',
+        'Önerin kabul edildi ve AI tarafından incelendi.',
+        '',
+        answer.slice(0, 3800)
+      ].join('\\n');
+      await target.author.send({ content: dm }).catch(() => null);
     } catch (e) {
       await status.edit({ content: '⚠️ Öneri kabul edildi, ancak AI bağlantısı çalışmadı: `' + String(e.message || e).slice(0, 500) + '`' }).catch(() => {});
     }
