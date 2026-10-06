@@ -35,7 +35,8 @@ const DISABLED_SLASH_COMMANDS = new Set([
   'avatar',
   'banner',
   'sabitlenen',
-  'ilkmesaj'
+  'ilkmesaj',
+  'not'
 ]);
 
 for (const cat of CATEGORIES) {
