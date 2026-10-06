@@ -1,8 +1,21 @@
 'use strict';
 
-const CURRENT_UPDATE = 10;
+const CURRENT_UPDATE = 11;
 
 const UPDATES = [
+  {
+    version: 11,
+    title: 'Müzik + Ticket + Kilit + gelişmiş sunucu kurulumu',
+    items: [
+      'YouTube müzik altyapısı güncellendi ve hata mesajları iyileştirildi.',
+      'Küçük ve şık /ticket-panel sistemi eklendi.',
+      'Ticket açılınca özel kanal ve kilitle/aç/kapat kontrol paneli gelir.',
+      '.tlock KANAL_ID ile istenen kanal doğrudan kilitlenebilir.',
+      '/sunucu-kur artık roller, izinler, ticket kategorisi ve çoklu ses odaları kuruyor.',
+      'FREEBUFF Üye rolü yeni katılanlara otomatik veriliyor.'
+    ]
+  },
+
   {
     version: 10,
     title: 'Temiz arayüz + gelişmiş sunucu kurulumu',
