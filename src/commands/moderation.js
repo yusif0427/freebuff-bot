@@ -233,19 +233,102 @@ const commands = [
     }
   },
   {
-    name: 'sunucu-kur', description: 'Temel Freebuff kanal ve kategori yapısını kurar', options: [],
+    name: 'sunucu-kur',
+    description: 'Gelişmiş Freebuff kategori, metin ve çoklu ses kanalı yapısını kurar',
+    options: [],
     default_member_permissions: String(PermissionFlagsBits.Administrator),
     async execute(i) {
       const { ChannelType } = require('discord.js');
-      const plan = [{ cat: '📁 FREEBUFF', channels: [['📜・kurallar', ChannelType.GuildText],['👋・hosgeldin', ChannelType.GuildText],['💬・genel', ChannelType.GuildText],['🤖・bot-komut', ChannelType.GuildText],['📊・istatistik', ChannelType.GuildText],['🔊・Lobi', ChannelType.GuildVoice]] }];
-      let created=0, existing=0;
+      const plan = [
+        {
+          cat: '📁 FREEBUFF • ANA',
+          channels: [
+            ['📜・kurallar', ChannelType.GuildText],
+            ['📢・duyurular', ChannelType.GuildText],
+            ['👋・hosgeldin', ChannelType.GuildText],
+            ['💬・genel', ChannelType.GuildText],
+            ['🤖・bot-komut', ChannelType.GuildText],
+            ['💡・öneriler', ChannelType.GuildText]
+          ]
+        },
+        {
+          cat: '🎮 OYUN • EĞLENCE',
+          channels: [
+            ['🎮・oyun', ChannelType.GuildText],
+            ['😂・meme', ChannelType.GuildText],
+            ['🎵・müzik', ChannelType.GuildText],
+            ['🔊・Lobi', ChannelType.GuildVoice],
+            ['🔊・Oyun 1', ChannelType.GuildVoice],
+            ['🔊・Oyun 2', ChannelType.GuildVoice]
+          ]
+        },
+        {
+          cat: '🛡️ YÖNETİM • LOG',
+          channels: [
+            ['📊・istatistik', ChannelType.GuildText],
+            ['🛡️・mod-log', ChannelType.GuildText],
+            ['📋・uyarı-log', ChannelType.GuildText],
+            ['🔊・Yönetim Odası', ChannelType.GuildVoice]
+          ]
+        },
+        {
+          cat: '🌙 SES • SOHBET',
+          channels: [
+            ['🔊・Sohbet 1', ChannelType.GuildVoice],
+            ['🔊・Sohbet 2', ChannelType.GuildVoice],
+            ['🔊・AFK', ChannelType.GuildVoice]
+          ]
+        }
+      ];
+
+      await i.deferReply({ ephemeral: true });
+      let created = 0, existing = 0, failed = 0;
+
       for (const group of plan) {
-        let cat=i.guild.channels.cache.find(x=>x.type===ChannelType.GuildCategory&&x.name===group.cat);
-        if(!cat){cat=await i.guild.channels.create({name:group.cat,type:ChannelType.GuildCategory}).catch(()=>null);if(cat)created++;}
-        if(!cat)continue;
-        for(const [name,type] of group.channels){const found=i.guild.channels.cache.find(x=>x.name===name&&x.parentId===cat.id);if(found){existing++;continue;}await i.guild.channels.create({name,type,parent:cat.id}).then(()=>created++).catch(()=>{});}
+        let cat = i.guild.channels.cache.find(x => x.type === ChannelType.GuildCategory && x.name === group.cat);
+        if (!cat) {
+          cat = await i.guild.channels.create({
+            name: group.cat,
+            type: ChannelType.GuildCategory,
+            reason: 'FREEBUFF /sunucu-kur'
+          }).catch(() => null);
+          if (cat) created++;
+        } else {
+          existing++;
+        }
+
+        if (!cat) {
+          failed += group.channels.length;
+          continue;
+        }
+
+        for (const [name, type] of group.channels) {
+          const found = i.guild.channels.cache.find(x => x.name === name && x.parentId === cat.id);
+          if (found) {
+            existing++;
+            continue;
+          }
+          const made = await i.guild.channels.create({
+            name,
+            type,
+            parent: cat.id,
+            reason: 'FREEBUFF /sunucu-kur',
+            ...(type === ChannelType.GuildVoice ? { userLimit: 0 } : {})
+          }).catch(() => null);
+          if (made) created++;
+          else failed++;
+        }
       }
-      return ok(i,'🏗️ Sunucu Kurulumu',`Freebuff altyapısı hazır. Oluşturulan: **${created}** • Zaten vardı: **${existing}**`);
+
+      return ok(
+        i,
+        '🏗️ Sunucu Kurulumu • UPDATE 10',
+        'Gelişmiş Freebuff altyapısı hazır.\\n' +
+        '📦 Oluşturulan: **' + created + '**\\n' +
+        '♻️ Zaten vardı: **' + existing + '**\\n' +
+        '⚠️ Oluşturulamayan: **' + failed + '**\\n\\n' +
+        '🔊 Çoklu ses odaları + 🛡️ yönetim/log + 🎮 oyun/eğlence + 📁 ana kategori hazır.'
+      );
     }
   },
 ];
