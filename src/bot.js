@@ -3,6 +3,7 @@ const { Client, GatewayIntentBits, Partials, REST, Routes, Collection, Events, A
 const stats = require('./stats');
 const prefix = require('./prefixCommands');
 const { storeSnipe } = require('./commands/moderation');
+const { handleInteraction: handleTicketInteraction } = require('./tickets');
 const community = require('./community');
 
 const CATEGORIES = ['moderation', 'server', 'utility', 'games', 'fun', 'economy'];
@@ -138,6 +139,18 @@ client.once(Events.ClientReady, (c) => {
 
 // --- slash interactions --------------------------------------------------
 client.on(Events.InteractionCreate, async (i) => {
+  if (i.isButton() && i.customId.startsWith('freebuff:ticket:')) {
+    try {
+      await handleTicketInteraction(i);
+    } catch (e) {
+      console.error('[ticket] interaction hatası:', e);
+      try {
+        if (!i.replied && !i.deferred) await i.reply({ content: '❌ Ticket işlemi başarısız.', ephemeral: true });
+      } catch (_) {}
+    }
+    return;
+  }
+
   if (i.isStringSelectMenu() && i.customId === 'freebuff:help') {
     const category = i.values[0];
     const label = CATEGORY_LABELS[category] || category;
