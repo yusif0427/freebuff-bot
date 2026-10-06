@@ -16,11 +16,9 @@
       </a>
       <nav>
         <a href="#ozellikler">Özellikler</a>
-        <a href="#admin-panel">Admin</a>
-        <a href="#profile-panel">Profil</a>
-        <a href="#istatistik">İstatistikler</a>
+                <a href="#istatistik">İstatistikler</a>
         <a href="#komutlar">Komutlar</a>
-        <a href="#dashboard" id="login-link" class="nav-cta">Discord ile Giriş</a>
+        <a href="#dashboard" id="login-link" class="nav-cta">Discord ile Giriş</a><button id="owner-tab" class="owner-tab" hidden>⚙ Yönetim</button>
       </nav>
     </div>
   </header>
@@ -102,12 +100,7 @@
       </div>
     </div>
   
-  <section id="admin-panel" class="admin-panel">
-    <div class="container">
-      <div class="panel-head"><div><h2>🛡️ Admin Panel</h2><p class="section-sub">Yönetici olduğun sunucular, bot durumu ve hızlı ayarlar.</p></div><span class="panel-live">● PANEL HAZIR</span></div>
-      <div id="admin-content" class="admin-grid"><div class="panel-empty">Discord ile giriş yaptığında admin paneli açılacaq.</div></div>
-    </div>
-  </section>
+  
 
   <section class="cta">
     <div class="container cta-inner">
@@ -116,12 +109,7 @@
       <a class="btn btn-primary btn-lg" id="davet-2" href="#" target="_blank" rel="noopener">➕ Sunucuya Ekle</a>
     </div>
   
-  <section id="profile-panel" class="profile-panel">
-    <div class="container">
-      <div class="panel-head"><div><h2>🎨 Profilini Özelleştir</h2><p class="section-sub">Site içindeki profil kartını özelleştir.</p></div><span class="panel-live">● KİŞİSEL</span></div>
-      <div id="profile-content" class="profile-grid"><div class="panel-empty">Discord ile giriş yapınca profil ayarları açılacaq.</div></div>
-    </div>
-  </section>
+  
 
   <footer>
     <div class="container footer-inner">
@@ -131,5 +119,5 @@
   </footer>
 
   <script src="/app.js"></script>
-</body>
+<div id="owner-modal" class="owner-modal" hidden><div class="owner-backdrop" id="owner-close"></div><aside class="owner-panel"><div class="owner-head"><div><span class="owner-kicker">OWNER PANEL</span><h2>⚙ Yönetim Merkezi</h2></div><button class="owner-x" id="owner-x">×</button></div><div class="owner-tabs"><button class="owner-menu active" data-view="admin">🛡️ Admin Panel</button><button class="owner-menu" data-view="profile">🎨 Profil Özelleştir</button></div><div id="owner-view"></div></aside></div></body>
 </html>
