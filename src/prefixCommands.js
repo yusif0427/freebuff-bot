@@ -1,6 +1,7 @@
 'use strict';
 const { rand, pick } = require('./helpers');
 const suggestions = require('./suggestions');
+const { analyzeSuggestion } = require('./ai');
 
 // Prefix commands: message-based fallbacks so total command count > 100
 const coins = {};
@@ -120,9 +121,21 @@ const commands = {
     if (!target) return msg.reply('❌ Öneri mesajı bulunamadı.');
     if (target.author.bot) return msg.reply('❌ Bot mesajı öneri olarak kabul edilemez.');
     if (!target.content.trim()) return msg.reply('❌ Bu öneri mesajında metin yok.');
-    suggestions.approve({ guildId: msg.guild.id, channelId: msg.channel.id, messageId: target.id, authorId: target.author.id, authorTag: target.author.tag, content: target.content.trim(), approvedBy: msg.author.id, approvedByTag: msg.author.tag });
+
+    const suggestion = { guildId: msg.guild.id, channelId: msg.channel.id, messageId: target.id, authorId: target.author.id, authorTag: target.author.tag, content: target.content.trim(), approvedBy: msg.author.id, approvedByTag: msg.author.tag };
+    suggestions.approve(suggestion);
     await target.react('✅').catch(() => {});
-    return msg.reply({ content: '✅ **Öneri kabul edildi!**\n\n📌 Bu öneri arka planda kaydedildi ve sonraki otomasyon için hazır.', allowedMentions: { repliedUser: false } });
+
+    const status = await msg.reply({ content: '🤖 **AI öneriyi inceliyor...**', allowedMentions: { repliedUser: false } });
+    try {
+      const answer = await analyzeSuggestion(suggestion);
+      const chunks = answer.match(/[\\s\\S]{1,1800}/g) || ['AI yanıt üretmedi.'];
+      await status.edit({ content: '🤖 **AI analizi:**\\n\\n' + chunks[0] });
+      for (let i = 1; i < chunks.length; i++) await msg.channel.send({ content: chunks[i] });
+    } catch (e) {
+      await status.edit({ content: '⚠️ Öneri kabul edildi, ancak AI bağlantısı çalışmadı: `' + String(e.message || e).slice(0, 500) + '`' }).catch(() => {});
+    }
+    return status;
   },
   tlock: async (msg, args) => {
     if (!msg.member.permissions.has('ManageChannels')) return msg.reply('❌ Yetkin yok.');
