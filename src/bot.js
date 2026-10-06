@@ -289,8 +289,11 @@ client.on(Events.MessageCreate, async (msg) => {
   }
 
   // prefix commands
-  if (!msg.content.startsWith(prefix.prefix)) return;
-  const args = msg.content.slice(prefix.prefix.length).trim().split(/\s+/);
+  const isBangPrefix = msg.content.startsWith(prefix.prefix);
+  const isDotLock = msg.content.startsWith('.tlock');
+  if (!isBangPrefix && !isDotLock) return;
+  const usedPrefix = isDotLock ? '.' : prefix.prefix;
+  const args = msg.content.slice(usedPrefix.length).trim().split(/\s+/);
   const name = (args.shift() || '').toLowerCase();
   const fn = prefix.commands[name];
   if (!fn) return;
