@@ -3,6 +3,23 @@ const path = require('path');
 const fs = require('fs');
 const express = require('express');
 
+// Process-level safety: log unexpected failures and let Render restart the service cleanly.
+let shuttingDown = false;
+function shutdown(reason, error) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.error('[process] ' + reason + (error ? ': ' + (error?.stack || error?.message || error) : ''));
+  setTimeout(() => process.exit(1), 1000).unref();
+}
+process.on('unhandledRejection', (reason) => shutdown('unhandled promise rejection', reason));
+process.on('uncaughtException', (error) => shutdown('uncaught exception', error));
+process.on('SIGTERM', () => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log('[process] SIGTERM alındı, servis bağlanıyor...');
+  setTimeout(() => process.exit(0), 500).unref();
+});
+
 // minimal .env loader (no dependency) — Render uses real env vars instead
 (() => {
   const file = path.join(__dirname, '.env');
@@ -30,7 +47,6 @@ function jsonError(res, code, msg) { return res.status(code).json({ error: msg }
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Live stats used by the website (polls every 5s)
 app.get('/api/stats', (req, res) => {
   res.set('Cache-Control', 'no-store');
   const s = stats.snapshot();
@@ -44,13 +60,10 @@ app.get('/api/stats', (req, res) => {
       prefix: Object.keys(require('./src/prefixCommands').commands).length,
       get total() { return this.slash + this.prefix; }
     },
-    categories: commands.size
-      ? [...new Set([...commands.values()].map(c => c.category))]
-      : []
+    categories: commands.size ? [...new Set([...commands.values()].map(c => c.category))] : []
   });
 });
 
-// Command list for the website's command browser
 app.get('/api/commands', (req, res) => {
   res.set('Cache-Control', 'public, max-age=60');
   const byCat = {};
@@ -65,7 +78,6 @@ app.get('/api/commands', (req, res) => {
 
 app.get('/api/health', (req, res) => res.json({ ok: true, uptime: process.uptime() }));
 
-// Discord OAuth2 dashboard. Secrets stay server-side; the browser never receives them.
 app.get('/auth/discord', (req, res) => {
   const clientId = process.env.CLIENT_ID;
   const redirect = process.env.DISCORD_REDIRECT_URI || (process.env.PUBLIC_URL ? new URL('/auth/callback', process.env.PUBLIC_URL).toString() : null);
@@ -150,8 +162,8 @@ app.listen(PORT, () => {
 
 if (process.env.DISCORD_TOKEN) {
   client.login(process.env.DISCORD_TOKEN).catch(e => {
-    console.error('[bot] giris hatasi (site calismaya devam eder):', e.message);
+    console.error('[bot] giris hatasi (site calismaya davam edir):', e.message);
   });
 } else {
-  console.log('[bot] DISCORD_TOKEN yok — site-only mod. Slash komutlari yerel olarak kayitli.');
+  console.log('[bot] DISCORD_TOKEN yok — site-only mod. Slash komutlari yerel olaraq qeydli.');
 }
